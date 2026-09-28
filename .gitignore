@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+/artifacts/
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.log
+.env
+.env.*

@@ -1,0 +1,7 @@
+name = "maya_implementation"
+description = "Implement a bounded C# UI, settings or polling change in assigned MayaX-Battery files."
+model = "gpt-6-sol"
+model_reasoning_effort = "high"
+developer_instructions = """
+Read AGENTS.md and the relevant existing code. Own only the files assigned by the primary agent; other workers share this checkout. Preserve their changes. Keep HID commands and discharge calculations unchanged unless explicitly included in the task. Cover changed behavior with meaningful console checks. Coordinate builds and preview generation with the primary agent. Report changed files, actual checks and remaining limitations. Do not commit, push, tag or publish. Ask the primary agent about material scope or authority questions.
+"""

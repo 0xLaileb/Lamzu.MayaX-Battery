@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: '0.0.0-dev'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build, checks and portable package
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Build
+        run: dotnet build src/MayaX-Battery.csproj -c Release --warnaserror
+      - name: Run hardware-independent checks
+        run: dotnet run --project tests/Checks.csproj -c Release
+      - name: Package and smoke test
+        env:
+          PACKAGE_VERSION: ${{ inputs.version || '0.0.0-dev' }}
+        run: ./tools/Build-Release.ps1 -Version $env:PACKAGE_VERSION
+      - name: Upload portable package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-x64
+          path: |
+            artifacts/release/*.zip
+            artifacts/release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

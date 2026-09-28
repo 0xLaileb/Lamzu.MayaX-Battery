@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../src/PollSchedule.cs" Link="PollSchedule.cs" />
+    <Compile Include="../src/Battery.cs" Link="Battery.cs" />
+    <Compile Include="../src/Hid.cs" Link="Hid.cs" />
+    <Compile Include="../src/RuntimeEstimate.cs" Link="RuntimeEstimate.cs" />
+    <Compile Include="../src/Localization.cs" Link="Localization.cs" />
+    <Compile Include="../src/AppStorage.cs" Link="AppStorage.cs" />
+    <Compile Include="../src/IconFactory.cs" Link="IconFactory.cs" />
+    <Compile Include="../src/PixelFont.cs" Link="PixelFont.cs" />
+  </ItemGroup>
+</Project>
+
