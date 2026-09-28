@@ -9,6 +9,7 @@
     <Nullable>disable</Nullable>
     <LangVersion>14.0</LangVersion>
     <AssemblyName>MayaX-Battery</AssemblyName>
+    <Version>1.1.0</Version>
     <RootNamespace>MayaXBattery</RootNamespace>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ApplicationManifest>app.manifest</ApplicationManifest>
