@@ -1,6 +1,8 @@
 **/bin/
 **/obj/
 /artifacts/
+MayaX-diagnostics-*.zip
+MayaX-diagnostics-error-*.txt
 .vs/
 .idea/
 *.user

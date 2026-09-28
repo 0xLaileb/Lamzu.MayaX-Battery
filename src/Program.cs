@@ -7,8 +7,20 @@ namespace MayaXBattery;
 internal static class Program
 {
     [STAThread]
-    static void Main(string[] args)
+    static int Main(string[] args)
     {
+        if (args.Contains("--diagnostics", StringComparer.Ordinal))
+        {
+            if (args.Length != 1)
+            {
+                Console.Error.WriteLine("Use --diagnostics without other arguments.");
+                return 2;
+            }
+
+            return DiagnosticCommand.Run(DiagnosticCommand.ExecutableDirectory(),
+                Diagnostics.Capture, Console.Out, Console.Error);
+        }
+
         System.Windows.Forms.Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         System.Windows.Forms.Application.EnableVisualStyles();
         System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
@@ -26,7 +38,7 @@ internal static class Program
                 else state = option;
             }
             WriteUiPreview(args[1], state, scale, narrow, language);
-            return;
+            return 0;
         }
 
         if (args.Length >= 2 && args[0] == "--menu-preview")
@@ -35,7 +47,7 @@ internal static class Program
             if (options.Any(option => option != "submenu"))
                 throw new ArgumentException("Unknown menu preview option.");
             WriteMenuPreview(args[1], language, options.Contains("submenu"));
-            return;
+            return 0;
         }
 
         if (args.Length >= 2 && args[0] == "--preview")
@@ -43,22 +55,32 @@ internal static class Program
             var (language, options) = PreviewOptions(args.Skip(2).ToArray());
             if (options.Length != 0) throw new ArgumentException("Unknown icon preview option.");
             Preview.Write(args[1], language);
-            return;
+            return 0;
         }
 
-        bool showWindow = !args.Contains("--tray") || args.Contains("--show");
+        bool diagnosticsOnly = args.Contains("--diagnostics-only");
+        UiLanguage? diagnosticLanguage = null;
+        if (diagnosticsOnly)
+        {
+            var (language, options) = PreviewOptions(args.Where(a => a != "--diagnostics-only").ToArray());
+            if (options.Length != 0) throw new ArgumentException("Use --diagnostics-only [--language en|ru].");
+            diagnosticLanguage = args.Contains("--language") ? language : null;
+        }
+        bool showWindow = diagnosticsOnly || !args.Contains("--tray") || args.Contains("--show");
+        var instanceSuffix = diagnosticsOnly ? "_Diagnostics" : "";
         using var showRequested = new EventWaitHandle(false, EventResetMode.AutoReset,
-            @"Local\MayaX-Battery_Show");
-        using var single = new Mutex(true, @"Local\MayaX-Battery_Tray", out bool first);
+            @"Local\MayaX-Battery_Show" + instanceSuffix);
+        using var single = new Mutex(true, @"Local\MayaX-Battery_Tray" + instanceSuffix, out bool first);
         if (!first)
         {
             if (showWindow) showRequested.Set();
-            return;
+            return 0;
         }
 
-        AppStorage.MigrateLegacyFiles();
+        if (!diagnosticsOnly) AppStorage.MigrateLegacyFiles();
         System.Windows.Forms.Application.Run(new TrayApp(showWindow,
-            showRequested));
+            showRequested, diagnosticsOnly, diagnosticLanguage));
+        return 0;
     }
 
     static (UiLanguage Language, string[] Options) PreviewOptions(string[] options)
@@ -149,6 +171,7 @@ internal static class Program
         menu.Items.Add(new ToolStripMenuItem("LAMZU Maya X: 78%") { Enabled = false });
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem(text.RefreshNow));
+        menu.Items.Add(new ToolStripMenuItem(text.ExportDiagnostics));
         var languageMenu = new ToolStripMenuItem(text.LanguageMenu);
         languageMenu.DropDownItems.Add(new ToolStripMenuItem("EN")
             { Tag = UiLanguage.English, Checked = language == UiLanguage.English });
@@ -158,7 +181,8 @@ internal static class Program
         menu.Items.Add(new ToolStripMenuItem(text.Exit));
         TrayMenuRenderer.Configure(menu);
         menu.Show(new Point(60, 60));
-        menu.Items[showSubmenu ? 4 : 3].Select();
+        if (showSubmenu) languageMenu.Select();
+        else menu.Items[3].Select();
         if (showSubmenu) languageMenu.ShowDropDown();
         System.Windows.Forms.Application.DoEvents();
         int childWidth = showSubmenu ? languageMenu.DropDown.Width : 0;

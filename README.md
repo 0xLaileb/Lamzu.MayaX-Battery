@@ -19,6 +19,7 @@ The screenshots use demonstration data. They do not show live readings from a co
 - [Features](#features)
 - [Getting started](#getting-started)
 - [Usage](#usage)
+- [Diagnostics](docs/diagnostics.md)
 - [How it works](docs/how-it-works.md)
 - [Checks](#checks)
 - [Project structure](#project-structure)
@@ -35,6 +36,7 @@ The screenshots use demonstration data. They do not show live readings from a co
 | Runtime estimate | Uses readings taken while discharging. An estimate appears after at least 30 minutes and a drop of at least 2 percentage points. Charging periods and long gaps are excluded. |
 | English and Russian | Choose `EN` or `RU` with the flag buttons in the window or from the tray menu. The selection applies immediately and is saved locally. By default, the app follows the Windows display language when it is Russian; otherwise it uses English. |
 | Local history | Stores observations and language preferences under `%LOCALAPPDATA%\MayaX-Battery`. Existing data under `%LOCALAPPDATA%\MouseBattery` is copied when needed; the original files are preserved. |
+| Diagnostics | Saves a local ZIP with relevant HID metadata, candidate selection reasons and available polling events. Automatic collection sends no vendor commands and uploads nothing. It adds no battery support for other mice. |
 | Standalone Windows app | The release is a self-contained, single-file Windows x64 executable. No separate .NET runtime installation is required. |
 
 The project targets the LAMZU Maya X. A battery reading was checked on this model on September 3, 2026. Compatibility with other devices has not been established.
@@ -62,6 +64,10 @@ The package and its SHA-256 checksum are written to `artifacts/release/`. The sc
 ## Usage
 
 Start `MayaX-Battery.exe` to open the details window and show the tray icon. Running it again brings the existing window forward. Use `--tray` to start with only the tray icon. Closing the window leaves the app running in the tray. Double-click the tray icon to reopen the window. Right-click it to refresh the reading, select a language, or exit.
+
+To collect a report without opening the UI or tray, run `MayaX-Battery.exe --diagnostics`. It saves a uniquely named ZIP beside the executable. Exit code `0` means the ZIP was saved, `1` means export failed, and `2` means invalid arguments. A saved report may still show an incomplete device scan. The interactive **Export diagnostics...** action remains available from the window and tray menu and lets you choose the destination.
+
+See [collecting a compatibility report](docs/diagnostics.md) for wired and wireless collection steps and the [universal prompt for an AI agent in a fork](docs/friend-agent-prompt.md). The report is a scoped, passive snapshot; firmware can remain unknown, and HID report IDs are not collected. To investigate another mouse, use a separate fork and require exact-model protocol evidence before implementation. If normal polling is unresponsive, `MayaX-Battery.exe --diagnostics-only` opens a separate passive UI instance without saving history or preferences.
 
 ### Start automatically on Windows 11
 

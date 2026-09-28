@@ -24,8 +24,11 @@ public partial class DetailsWindow : Window
     bool _hasReading, _busy;
     int _pollSeconds;
     string _estimateNote;
+    bool _exporting;
+    string _diagnosticResult;
 
     internal event EventHandler RefreshRequested;
+    internal event EventHandler DiagnosticsRequested;
     internal event EventHandler<UiLanguage> LanguageChanged;
 
     internal DetailsWindow(UiLanguage language = UiLanguage.English)
@@ -44,6 +47,8 @@ public partial class DetailsWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(EnglishButton, "English");
         System.Windows.Automation.AutomationProperties.SetName(RussianButton, "Русский");
         System.Windows.Automation.AutomationProperties.SetName(RefreshButton, _text.RefreshAutomation);
+        System.Windows.Automation.AutomationProperties.SetName(DiagnosticsButton, _text.ExportDiagnostics);
+        UpdateDiagnosticState();
         EnglishButton.BorderBrush = language == UiLanguage.English ? SelectedLanguage : UnselectedLanguage;
         RussianButton.BorderBrush = language == UiLanguage.Russian ? SelectedLanguage : UnselectedLanguage;
         if (_hasReading) RenderReading();
@@ -73,7 +78,7 @@ public partial class DetailsWindow : Window
     void RenderReading()
     {
         var r = _reading;
-        Title = $"{(r.Ok ? TrayApp.ShortName(r.Device) : "LAMZU Maya X")} · Battery";
+        Title = $"{(r.Ok ? TrayApp.ShortName(r.Device) : "LAMZU")} · Battery";
         PercentText.Text = r.Ok ? $"{r.Percent}%" : "?";
         System.Windows.Automation.AutomationProperties.SetName(PercentText,
             r.Ok ? _text.ChargeAutomation(r.Percent) : _text.UnknownCharge);
@@ -90,12 +95,12 @@ public partial class DetailsWindow : Window
         HoursText.Text = r.Ok && !r.Charging && _hours is >= 0
             ? _hours.Value < 1 ? _text.RemainingMinutes(_hours.Value * 60) : _text.RemainingHours(_hours.Value)
             : "···";
-        NoteText.Text = !r.Ok ? _text.WakeMouse
+        NoteText.Text = !r.Ok ? _text.DiagnosticHelp
             : r.Charging ? _text.EstimateAfterDischarge
             : !string.IsNullOrWhiteSpace(_estimateNote) ? _estimateNote
             : _hours.HasValue ? _text.ApproximateEstimate
             : _text.EstimateAfterChange;
-        UpdatedText.Text = _checked.HasValue
+        UpdatedText.Text = r.Error == "diagnostic-only" ? _text.DiagnosticMode : _checked.HasValue
             ? _text.CheckedAt(_checked.Value, _pollSeconds)
             : _text.FirstPollPending;
         RefreshButton.IsEnabled = !_busy;
@@ -114,6 +119,23 @@ public partial class DetailsWindow : Window
 
     void OnRefreshClick(object sender, RoutedEventArgs e) =>
         RefreshRequested?.Invoke(this, EventArgs.Empty);
+
+    void OnDiagnosticsClick(object sender, RoutedEventArgs e) =>
+        DiagnosticsRequested?.Invoke(this, EventArgs.Empty);
+
+    internal void SetDiagnosticState(bool exporting, string result = null)
+    {
+        _exporting = exporting;
+        _diagnosticResult = result;
+        UpdateDiagnosticState();
+    }
+
+    void UpdateDiagnosticState()
+    {
+        DiagnosticsButton.IsEnabled = !_exporting;
+        DiagnosticsButton.Content = _exporting ? _text.CollectingDiagnostics : _text.ExportDiagnostics;
+        DiagnosticsNote.Text = _exporting ? _text.DiagnosticWaiting : _diagnosticResult ?? _text.DiagnosticPrivacy;
+    }
 
     void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {

@@ -98,6 +98,16 @@ internal sealed class UiStrings
     internal string Refresh => Ru ? "Обновить" : "Refresh";
     internal string RefreshAutomation => Ru ? "Обновить заряд мыши" : "Refresh mouse battery level";
     internal string Checking => Ru ? "Проверяем…" : "Checking…";
+    internal string ExportDiagnostics => Ru ? "Экспорт диагностики…" : "Export diagnostics…";
+    internal string CollectingDiagnostics => Ru ? "Собираем отчёт…" : "Collecting report…";
+    internal string DiagnosticPrivacy => Ru ? "Локальный ZIP-отчёт. Данные никуда не отправляются." : "Local ZIP report. Nothing is uploaded.";
+    internal string DiagnosticWaiting => Ru ? "Ожидаем завершения опроса и собираем данные устройств." : "Waiting for polling to finish and collecting device details.";
+    internal string DiagnosticHelp => Ru ? "Проверьте приёмник. Если ошибка остаётся, экспортируйте диагностику." : "Check the receiver. If the problem persists, export diagnostics.";
+    internal string DiagnosticSaveTitle => Ru ? "Сохранить отчёт диагностики" : "Save diagnostic report";
+    internal string DiagnosticSaved => Ru ? "Диагностика сохранена." : "Diagnostics saved.";
+    internal string DiagnosticFailed => Ru ? "Не удалось сохранить диагностику. Проверьте папку и права доступа." : "Could not save diagnostics. Check the folder and access permissions.";
+    internal string DiagnosticBusy => Ru ? "Опрос не завершился. Запустите приложение с --diagnostics: отчёт сохранится рядом с EXE." : "Polling did not finish. Run the app with --diagnostics to save a report beside the EXE.";
+    internal string DiagnosticMode => Ru ? "Режим диагностики: опрос батареи отключён" : "Diagnostic mode: battery polling is off";
     internal string OpenApp => Ru ? "Открыть MayaX-Battery" : "Open MayaX-Battery";
     internal string PollingMouse => Ru ? "Опрашиваю мышь…" : "Checking mouse…";
     internal string RefreshNow => Ru ? "Обновить сейчас" : "Refresh now";
@@ -118,6 +128,7 @@ internal sealed class UiStrings
             "устройство не найдено" => Ru ? "Устройство не найдено" : "Device not found",
             "мышь не отвечает" or "Нет ответа от мыши" => Ru ? "Мышь не отвечает" : "Mouse is not responding",
             "Ожидание первого опроса" => FirstPollPending,
+            "diagnostic-only" => DiagnosticMode,
             _ => error
         };
     }

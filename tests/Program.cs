@@ -90,6 +90,7 @@ Directory.CreateDirectory(fixtureRoot);
 var blockedTempDirectory = Path.Combine(fixtureRoot, "blocked.json.tmp");
 try
 {
+    DiagnosticChecks.Run(Check, fixtureRoot);
     var englishCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
     var russianCulture = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
     var settingsPath = Path.Combine(fixtureRoot, "settings.json");

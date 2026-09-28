@@ -13,6 +13,9 @@
     <Compile Include="../src/RuntimeEstimate.cs" Link="RuntimeEstimate.cs" />
     <Compile Include="../src/Localization.cs" Link="Localization.cs" />
     <Compile Include="../src/AppStorage.cs" Link="AppStorage.cs" />
+    <Compile Include="../src/Diagnostics.cs" Link="Diagnostics.cs" />
+    <Compile Include="../src/DiagnosticCommand.cs" Link="DiagnosticCommand.cs" />
+    <Compile Include="../src/DiagnosticLog.cs" Link="DiagnosticLog.cs" />
     <Compile Include="../src/IconFactory.cs" Link="IconFactory.cs" />
     <Compile Include="../src/PixelFont.cs" Link="PixelFont.cs" />
   </ItemGroup>

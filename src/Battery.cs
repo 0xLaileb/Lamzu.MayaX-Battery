@@ -38,11 +38,15 @@ internal sealed class CompxSource
 
     public Reading Read()
     {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         var path = _cachedPath;
         var name = _cachedName;
 
         if (path == null && !Locate(out path, out name))
+        {
+            DiagnosticLog.Record("poll.locate", "no-supported-collection", watch.ElapsedMilliseconds);
             return Reading.Fail("устройство не найдено");
+        }
 
         // Up to four attempts: the dongle occasionally answers with a stale or empty frame,
         // which is why Aurora retries too.
@@ -54,21 +58,29 @@ internal sealed class CompxSource
             tx[4] = 2;               // payload[3] — payload length
             tx[6] = OpReadBattery;   // payload[5] — opcode
 
-            var rx = Hid.FeatureExchange(path, tx, ReportLen, 100);
+            var rx = Hid.FeatureExchange(path, tx, ReportLen, 100, attempt + 1);
             if (rx == null)
             {
+                DiagnosticLog.Record("poll.exchange", "no-response", watch.ElapsedMilliseconds, attempt + 1, path: path);
                 // Device may have been re-enumerated (unplugged, dongle re-seated).
                 _cachedPath = null;
-                if (!Locate(out path, out name)) return Reading.Fail("устройство не найдено");
+                if (!Locate(out path, out name))
+                {
+                    DiagnosticLog.Record("poll.relocate", "no-supported-collection", watch.ElapsedMilliseconds, attempt + 1, path: path);
+                    return Reading.Fail("устройство не найдено");
+                }
                 continue;
             }
 
-            if (TryParse(rx, out int percent, out bool charging))
+            if (TryParseDetailed(rx, out int percent, out bool charging, out string rejection))
             {
+                DiagnosticLog.Record("poll.parse", "ok", watch.ElapsedMilliseconds, attempt + 1, rx, path);
                 _cachedPath = path;
                 _cachedName = name;
                 return new Reading(percent, charging, name, null);
             }
+            DiagnosticLog.Record("poll.parse", rejection, watch.ElapsedMilliseconds, attempt + 1,
+                RecognizedBatteryEnvelope(rx) ? rx : null, path);
             // percent 0 is the firmware's "no answer" sentinel (Aurora returns [0,0] the same way)
             // rather than a genuinely flat battery, so keep retrying instead of reporting 0%.
             Thread.Sleep(150);
@@ -76,21 +88,38 @@ internal sealed class CompxSource
 
         _cachedPath = path;
         _cachedName = name;
+        DiagnosticLog.Record("poll.result", "retries-exhausted", watch.ElapsedMilliseconds, 4, path: path);
         return Reading.Fail("мышь не отвечает");
     }
 
     internal static bool TryParse(byte[] rx, out int percent, out bool charging)
+        => TryParseDetailed(rx, out percent, out charging, out _);
+
+    static bool RecognizedBatteryEnvelope(byte[] rx)
+    {
+        if (rx == null || rx.Length < 8) return false;
+        int offset = rx[0] == ReplyMagic ? 0 : 1;
+        return rx.Length >= offset + 8 && rx[offset] == ReplyMagic &&
+            rx[offset + 3] == 2 && rx[offset + 5] == OpReadBattery;
+    }
+
+    internal static bool TryParseDetailed(byte[] rx, out int percent, out bool charging, out string rejection)
     {
         percent = 0;
         charging = false;
-        if (rx == null || rx.Length < 8) return false;
+        rejection = "";
+        if (rx == null || rx.Length < 8) { rejection = "short-response"; return false; }
         int offset = rx[0] == ReplyMagic ? 0 : 1;
-        if (rx.Length < offset + 8 || rx[offset] != ReplyMagic ||
-            rx[offset + 3] != 2 || rx[offset + 5] != OpReadBattery || rx[offset + 6] > 1)
-            return false;
+        if (rx.Length < offset + 8) { rejection = "short-response"; return false; }
+        if (rx[offset] != ReplyMagic) { rejection = "wrong-marker"; return false; }
+        if (rx[offset + 3] != 2) { rejection = "wrong-length"; return false; }
+        if (rx[offset + 5] != OpReadBattery) { rejection = "wrong-opcode"; return false; }
+        if (rx[offset + 6] > 1) { rejection = "invalid-charging-flag"; return false; }
         percent = rx[offset + 7];
         charging = rx[offset + 6] == 1;
-        return percent is >= 1 and <= 100;
+        if (percent is >= 1 and <= 100) return true;
+        rejection = percent == 0 ? "zero-percent-sentinel" : "invalid-percent";
+        return false;
     }
 
     static bool Locate(out string path, out string name)
