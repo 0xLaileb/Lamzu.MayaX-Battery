@@ -1,6 +1,6 @@
 # 🖱️ MayaX-Battery
 
-A Windows battery monitor for the LAMZU Maya X. It shows the current charge in the notification area and estimates remaining runtime from observed discharge.
+A Windows battery monitor for the [LAMZU Maya X](https://lamzu.com/products/lamzu-maya-x). It shows the current charge in the notification area and estimates remaining runtime from observed discharge.
 
 ![MayaX-Battery window showing the English interface](docs/window-preview.png)
 
