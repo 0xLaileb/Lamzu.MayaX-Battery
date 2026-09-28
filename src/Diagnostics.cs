@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -211,8 +212,11 @@ internal static class Diagnostics
         b.AppendLine($"HID interfaces found: {Math.Max(0, snapshot.TotalHidInterfaces)}; candidate collections inspected: {Math.Max(0, snapshot.InspectedCollections)}; exported: {devices.Length}");
         b.AppendLine($"Discovery issues: {issues.Length}; recent poll events: {events.Length}");
         bool incomplete = issues.Length != 0 || devices.Any(d => !d.CapabilitiesAvailable);
-        bool eligible = devices.Any(d => d.SelectionReason.StartsWith("first eligible", StringComparison.Ordinal) ||
-            d.SelectionReason.StartsWith("eligible in", StringComparison.Ordinal));
+        bool eligible = devices.Any(d => d.CapabilitiesAvailable &&
+            d.VendorId.Equals("373E", StringComparison.OrdinalIgnoreCase) &&
+            d.FeatureLength == 65 &&
+            ushort.TryParse(d.UsagePage, NumberStyles.HexNumber, CultureInfo.InvariantCulture,
+                out ushort usagePage) && usagePage >= 0xFF00);
         if (incomplete)
             b.AppendLine("Discovery is incomplete: some interfaces or descriptors could not be inspected. Current poll eligibility may be unknown; review issues in devices.json.");
         if (devices.Length == 0)

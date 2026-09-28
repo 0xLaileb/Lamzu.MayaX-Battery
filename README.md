@@ -20,6 +20,7 @@ The screenshots use demonstration data. They do not show live readings from a co
 - [Getting started](#getting-started)
 - [Usage](#usage)
 - [Diagnostics](docs/diagnostics.md)
+- [Adapt another mouse with an AI agent](#adapt-another-mouse-with-an-ai-agent)
 - [How it works](docs/how-it-works.md)
 - [Checks](#checks)
 - [Project structure](#project-structure)
@@ -67,7 +68,7 @@ Start `MayaX-Battery.exe` to open the details window and show the tray icon. Run
 
 To collect a report without opening the UI or tray, run `MayaX-Battery.exe --diagnostics`. It saves a uniquely named ZIP beside the executable. Exit code `0` means the ZIP was saved, `1` means export failed, and `2` means invalid arguments. A saved report may still show an incomplete device scan. The interactive **Export diagnostics...** action remains available from the window and tray menu and lets you choose the destination.
 
-See [collecting a compatibility report](docs/diagnostics.md) for wired and wireless collection steps and the [universal prompt for an AI agent in a fork](docs/friend-agent-prompt.md). The report is a scoped, passive snapshot; firmware can remain unknown, and HID report IDs are not collected. To investigate another mouse, use a separate fork and require exact-model protocol evidence before implementation. If normal polling is unresponsive, `MayaX-Battery.exe --diagnostics-only` opens a separate passive UI instance without saving history or preferences.
+See [collecting a compatibility report](docs/diagnostics.md) for wired and wireless collection steps and the [universal prompt for an AI agent in a fork](docs/agent-adaptation-prompt.md). The report is a scoped, passive snapshot; firmware can remain unknown, and HID report IDs are not collected. To investigate another mouse, use a separate fork and require exact-model protocol evidence before implementation. If normal polling is unresponsive, `MayaX-Battery.exe --diagnostics-only` opens a separate passive UI instance without saving history or preferences.
 
 ### Start automatically on Windows 11
 
@@ -82,6 +83,16 @@ The app will start in the tray the next time you sign in. You can double-click t
 Keep ordinary desktop shortcuts without `--tray` so they open the window. A repeated `--tray` launch leaves the existing window state unchanged. To stop automatic startup, delete the shortcut from `shell:startup`.
 
 Windows controls which tray icons remain visible. To keep the battery indicator visible, open the hidden icons menu (`^`) and drag it onto the notification area. See [Microsoft's taskbar guide](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows).
+
+## Adapt another mouse with an AI agent
+
+If you use an AI coding agent, [agent-adaptation-prompt.md](docs/agent-adaptation-prompt.md) provides a reusable workflow for investigating and adapting this app to your mouse in your own fork. The file contains only instructions for the agent, so you can point the agent directly to it without copying a prompt from a code block.
+
+1. Fork this repository from `main` and open a local checkout of your fork in your agent.
+2. Tell the agent: "Follow `docs/agent-adaptation-prompt.md` to investigate and adapt this fork to my mouse."
+3. Provide your exact mouse model and diagnostic ZIP files when available. The agent will ask for missing details and can help collect reports or build the diagnostic executable.
+
+The workflow covers source review, official protocol research, a compatibility plan, implementation in the fork, tests and a local build. A diagnostic report alone may not establish a safe battery protocol. Support for another model remains unverified until tested on that exact mouse and receiver; this upstream project still targets Maya X.
 
 ## Checks
 

@@ -11,6 +11,7 @@ internal static class DiagnosticChecks
         FromCollections_NordicOnly_ReportsUnsupportedCandidate(check);
         FromCollections_MayaXCollection_ReportsPollEligibility(check);
         FromCollections_UnavailableCapabilities_DoesNotClaimEligibility(check, fixtureRoot);
+        Export_Eligibility_UsesDescriptorFields(check, fixtureRoot);
         FromCollections_BootloaderIds_ExcludePolling(check);
         FromCollections_MultipleCollections_UsesAnonymousIds(check, fixtureRoot);
         Export_PersonalCanaries_RedactsEveryEntry(check, fixtureRoot);
@@ -107,6 +108,36 @@ internal static class DiagnosticChecks
         check(parsed.RootElement.GetProperty("issues")[0].GetProperty("status").GetString() ==
               "capabilities-unavailable",
             "Export_UnavailableCapabilities_PreservesDiscoveryIssue");
+    }
+
+    private static void Export_Eligibility_UsesDescriptorFields(Action<bool, string> check, string root)
+    {
+        var eligible = new DiagnosticSnapshot
+        {
+            CapturedUtc = DateTimeOffset.UtcNow,
+            Devices = [new DiagnosticDevice
+            {
+                VendorId = "373E", UsagePage = "FF00", FeatureLength = 65,
+                CapabilitiesAvailable = true,
+                SelectionReason = "C:\\Users\\PrivateFriend\\AppData\\secret"
+            }]
+        };
+        var eligibleEntries = ExportEntries(root, "eligible-redacted-reason.zip", eligible);
+        using var exported = JsonDocument.Parse(eligibleEntries["devices.json"]);
+        check(exported.RootElement.GetProperty("devices")[0].GetProperty("selectionReason").GetString() ==
+              "[redacted]" &&
+              !eligibleEntries["summary.txt"].Contains("No captured collection matches", StringComparison.Ordinal),
+            "Export_RedactedSelectionReason_DoesNotHideEligibleCollection");
+
+        var invalidLength = Diagnostics.FromCollections(
+            [Collection("invalid-length", 0x373E, 0x001E, "Maya X", 0xFF00, 1, 64, 0)]);
+        var invalidUsage = Diagnostics.FromCollections(
+            [Collection("invalid-usage", 0x373E, 0x001E, "Maya X", 0x0001, 1, 65, 0)]);
+        check(ExportEntries(root, "invalid-feature-length.zip", invalidLength)["summary.txt"]
+                  .Contains("No captured collection matches", StringComparison.Ordinal) &&
+              ExportEntries(root, "invalid-usage-page.zip", invalidUsage)["summary.txt"]
+                  .Contains("No captured collection matches", StringComparison.Ordinal),
+            "Export_IneligibleDescriptorFields_ReportNoMatch");
     }
 
     private static void FromCollections_MultipleCollections_UsesAnonymousIds(Action<bool, string> check, string root)
