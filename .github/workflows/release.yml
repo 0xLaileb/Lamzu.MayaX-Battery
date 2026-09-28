@@ -28,11 +28,11 @@ jobs:
         with:
           name: windows-x64
           path: release
-      - name: Create draft with ZIP and checksums
+      - name: Create draft with ZIP
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: >-
-          gh release create "$RELEASE_TAG" release/*
+          gh release create "$RELEASE_TAG" release/*.zip
           --verify-tag --draft --title "v${RELEASE_TAG#v}" --generate-notes

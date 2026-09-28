@@ -63,7 +63,17 @@ The package and its SHA-256 checksum are written to `artifacts/release/`. The sc
 
 Start `MayaX-Battery.exe` to open the details window and show the tray icon. Running it again brings the existing window forward. Use `--tray` to start with only the tray icon. Closing the window leaves the app running in the tray. Double-click the tray icon to reopen the window. Right-click it to refresh the reading, select a language, or exit.
 
-To start quietly when you sign in, put a shortcut to `MayaX-Battery.exe` in the Windows startup folder (`shell:startup`) and add `--tray` to its target, after the closing quote. For example: `"C:\Apps\MayaX-Battery\MayaX-Battery.exe" --tray`. Keep ordinary desktop shortcuts without this argument so they open the window. A repeated `--tray` launch also leaves the existing window state unchanged.
+### Start automatically on Windows 11
+
+1. Extract the app into a permanent folder, such as `C:\Apps\MayaX-Battery`.
+2. Press **Win + R**, enter `shell:startup`, and press **Enter**. This opens the startup folder for your Windows account.
+3. Right-click an empty area in that folder and choose **New > Shortcut**.
+4. Enter the executable path followed by `--tray`, for example: `"C:\Apps\MayaX-Battery\MayaX-Battery.exe" --tray`.
+5. Name the shortcut **MayaX-Battery** and click **Finish**.
+
+The app will start in the tray the next time you sign in. You can double-click the startup shortcut to check that it starts without opening a window. If Windows has disabled it, open **Settings > Apps > Startup** and enable **MayaX-Battery**.
+
+Keep ordinary desktop shortcuts without `--tray` so they open the window. A repeated `--tray` launch leaves the existing window state unchanged. To stop automatic startup, delete the shortcut from `shell:startup`.
 
 Windows controls which tray icons remain visible. To keep the battery indicator visible, open the hidden icons menu (`^`) and drag it onto the notification area. See [Microsoft's taskbar guide](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows).
 
