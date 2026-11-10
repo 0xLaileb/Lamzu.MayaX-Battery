@@ -3,39 +3,57 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="LAMZU · Battery"
         Icon="/Assets/MayaX-Battery.ico"
-        Width="400" Height="566"
-        ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
-        Background="#171D21" Foreground="#ECF2F1"
-        FontFamily="Segoe UI" SnapsToDevicePixels="True"
+        Width="400" SizeToContent="Height"
+        ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
+        Background="#151B1F" Foreground="#F1F6F5"
+        FontFamily="Segoe UI Variable Text, Segoe UI" SnapsToDevicePixels="True"
         UseLayoutRounding="True" PreviewKeyDown="OnPreviewKeyDown"
         SourceInitialized="OnSourceInitialized">
     <Window.Resources>
-        <SolidColorBrush x:Key="Ink" Color="#ECF2F1"/>
-        <SolidColorBrush x:Key="Muted" Color="#A4B3B6"/>
+        <SolidColorBrush x:Key="Ink" Color="#F1F6F5"/>
+        <SolidColorBrush x:Key="Muted" Color="#93A4A8"/>
         <SolidColorBrush x:Key="Accent" Color="#8FE2C9"/>
-        <SolidColorBrush x:Key="Panel" Color="#20292C"/>
+        <SolidColorBrush x:Key="Card" Color="#1C2529"/>
+        <SolidColorBrush x:Key="Outline" Color="#263237"/>
+        <FontFamily x:Key="Display">Segoe UI Variable Display, Segoe UI</FontFamily>
+        <!-- Segoe Fluent Icons ships with Windows 11; Windows 10 has the same code points in MDL2 Assets. -->
+        <FontFamily x:Key="Icons">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <Style x:Key="Glyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Icons}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Card}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Outline}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+        </Style>
         <Style x:Key="MetricLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource Muted}"/>
             <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style x:Key="MetricValue" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource Ink}"/>
-            <Setter Property="FontSize" Value="23"/>
+            <Setter Property="FontFamily" Value="{StaticResource Display}"/>
+            <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,7,0,0"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
         </Style>
-        <Style x:Key="RefreshButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#8FE2C9"/>
-            <Setter Property="Foreground" Value="#10241F"/>
-            <Setter Property="BorderThickness" Value="0"/>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="#0E221D"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Padding" Value="14,0,16,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="8">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="10"
+                                BorderBrush="Transparent" BorderThickness="2">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}"/>
                         </Border>
@@ -47,40 +65,73 @@
                                 <Setter TargetName="Surface" Property="Background" Value="#6EC6AA"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Surface" Property="Background" Value="#405853"/>
-                                <Setter Property="Foreground" Value="#B0C3BD"/>
+                                <Setter TargetName="Surface" Property="Background" Value="#2A3A3D"/>
+                                <Setter Property="Foreground" Value="{StaticResource Muted}"/>
                                 <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Surface" Property="BorderBrush" Value="White"/>
-                                <Setter TargetName="Surface" Property="BorderThickness" Value="2"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="LanguageButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#20292C"/>
-            <Setter Property="Foreground" Value="#ECF2F1"/>
-            <Setter Property="BorderBrush" Value="#344B48"/>
-            <Setter Property="BorderThickness" Value="1"/>
+
+        <!-- One half of the language switch. Tag="Selected" marks the active language. -->
+        <Style x:Key="SegmentButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Focusable" Value="True"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="7"
+                                BorderBrush="Transparent" BorderThickness="1" Padding="8,4">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="#2D4B48"/>
+                                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Selected">
+                                <Setter TargetName="Surface" Property="Background" Value="#2A3A3D"/>
+                                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="#ECF2F1"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LinkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="8"
+                                BorderBrush="Transparent" BorderThickness="1" Padding="8,5">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#1F2A2E"/>
+                                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -89,149 +140,193 @@
         </Style>
     </Window.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  Background="Transparent" PanningMode="VerticalOnly">
-    <Grid Margin="26,22,26,20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="BatteryHeading" Text="BATTERY LEVEL" FontSize="10" FontWeight="SemiBold"
-                       Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button x:Name="EnglishButton" Width="53" Height="27" Margin="0,0,5,0" ToolTip="English"
-                        Style="{StaticResource LanguageButtonStyle}" Click="OnEnglishClick">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="20" Height="12" ClipToBounds="True" Background="#173A75" Margin="0,0,5,0">
-                            <Canvas Width="20" Height="12">
-                                <Path Fill="White" Data="M0,0 L3,0 20,10 20,12 17,12 0,2 Z M20,0 L17,0 0,10 0,12 3,12 20,2 Z"/>
-                                <Path Fill="#D8424A" Data="M0,0 L1.4,0 20,11 20,12 18.6,12 0,1 Z M20,0 L18.6,0 0,11 0,12 1.4,12 20,1 Z"/>
-                                <Rectangle Width="20" Height="4" Canvas.Top="4" Fill="White"/>
-                                <Rectangle Width="6" Height="12" Canvas.Left="7" Fill="White"/>
-                                <Rectangle Width="20" Height="2" Canvas.Top="5" Fill="#D8424A"/>
-                                <Rectangle Width="3" Height="12" Canvas.Left="8.5" Fill="#D8424A"/>
-                            </Canvas>
-                        </Border>
-                        <TextBlock Text="EN" FontSize="10" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button x:Name="RussianButton" Width="53" Height="27" ToolTip="Русский"
-                        Style="{StaticResource LanguageButtonStyle}" Click="OnRussianClick">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Width="20" Height="12" ClipToBounds="True" Margin="0,0,5,0">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="4"/><RowDefinition Height="4"/><RowDefinition Height="4"/>
-                                </Grid.RowDefinitions>
-                                <Rectangle Grid.Row="0" Fill="White"/>
-                                <Rectangle Grid.Row="1" Fill="#3156A0"/>
-                                <Rectangle Grid.Row="2" Fill="#D83C48"/>
-                            </Grid>
-                        </Border>
-                        <TextBlock Text="RU" FontSize="10" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="1" Margin="0,8,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="72"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="PercentText" Grid.Column="0" Text="?" FontSize="70"
-                       FontWeight="Bold" Foreground="{StaticResource Accent}"
-                       VerticalAlignment="Center" AutomationProperties.Name="Battery level"/>
-            <Viewbox x:Name="MouseIconView" Grid.Column="1" Width="38" Height="64" Stretch="Uniform"
-                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                     AutomationProperties.Name="Mouse icon">
-                <Canvas Width="100" Height="170">
-                    <Path Data="M 50,3 C 17,3 1,28 1,55 L 1,117 C 1,148 19,167 50,167 C 81,167 99,148 99,117 L 99,55 C 99,28 83,3 50,3 Z"
-                          Fill="#223533" Stroke="#8FE2C9" StrokeThickness="3.2"
-                          StrokeLineJoin="Round"/>
-                    <Rectangle Canvas.Left="47" Canvas.Top="37" Width="6" Height="20"
-                               RadiusX="3" RadiusY="3" Fill="#8FE2C9"/>
-                </Canvas>
-            </Viewbox>
-        </Grid>
-
-        <StackPanel Grid.Row="2" Margin="0,1,0,0">
-            <TextBlock x:Name="StateText" Text="Waiting for data" FontSize="13"
-                       Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
-            <Grid Height="5" Margin="0,17,0,0" Background="#334146" ClipToBounds="True">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition x:Name="ChargeColumn" Width="0*"/>
-                    <ColumnDefinition x:Name="RemainderColumn" Width="100*"/>
-                </Grid.ColumnDefinitions>
-                <Border x:Name="ChargeFill" Grid.Column="0" Background="{StaticResource Accent}"/>
-            </Grid>
-        </StackPanel>
-
-        <Grid Grid.Row="3" Margin="0,24,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Background="{StaticResource Panel}" CornerRadius="10" Padding="16,13">
-                <StackPanel>
-                    <TextBlock x:Name="RateHeading" Text="Drain rate" Style="{StaticResource MetricLabel}"/>
-                    <TextBlock x:Name="RateText" Text="···" Style="{StaticResource MetricValue}"/>
-                </StackPanel>
-            </Border>
-            <Border Grid.Column="2" Background="{StaticResource Panel}" CornerRadius="10" Padding="16,13">
-                <StackPanel>
-                    <TextBlock x:Name="RemainingHeading" Text="Remaining" Style="{StaticResource MetricLabel}"/>
-                    <TextBlock x:Name="HoursText" Text="···" Style="{StaticResource MetricValue}"/>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <TextBlock x:Name="NoteText" Grid.Row="4" Margin="0,15,0,8"
-                   Text="An estimate will appear after the battery level changes."
-                   FontSize="12" Foreground="{StaticResource Muted}"
-                   TextWrapping="Wrap" VerticalAlignment="Top"/>
-
-        <Grid Grid.Row="6" Margin="0,9,0,0">
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#1A2226" Offset="0"/>
+                <GradientStop Color="#11161A" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+        <Grid Margin="24,16,24,18">
             <Grid.RowDefinitions>
-                <RowDefinition Height="1"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Border Grid.Row="0" Background="#344044"/>
-            <Grid Grid.Row="1" Margin="0,15,0,0">
+
+            <!-- Header: section label and language switch -->
+            <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="UpdatedText" Text="The first check has not finished"
-                           Foreground="{StaticResource Muted}" FontSize="11"
-                           TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <Button x:Name="RefreshButton" Grid.Column="1" Content="Refresh"
-                        Style="{StaticResource RefreshButtonStyle}" Height="36"
-                        AutomationProperties.Name="Refresh mouse battery level" Click="OnRefreshClick"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE962;" FontSize="14"
+                               Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="BatteryHeading" Text="BATTERY LEVEL" FontSize="10.5" FontWeight="SemiBold"
+                               Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Border Grid.Column="1" Background="#12181B" BorderBrush="{StaticResource Outline}"
+                        BorderThickness="1" CornerRadius="10" Padding="2">
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="EnglishButton" ToolTip="English"
+                                Style="{StaticResource SegmentButtonStyle}" Click="OnEnglishClick">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="20" Height="12" ClipToBounds="True" Background="#173A75"
+                                        Margin="0,0,6,0" VerticalAlignment="Center">
+                                    <Canvas Width="20" Height="12">
+                                        <Path Fill="White" Data="M0,0 L3,0 20,10 20,12 17,12 0,2 Z M20,0 L17,0 0,10 0,12 3,12 20,2 Z"/>
+                                        <Path Fill="#D8424A" Data="M0,0 L1.4,0 20,11 20,12 18.6,12 0,1 Z M20,0 L18.6,0 0,11 0,12 1.4,12 20,1 Z"/>
+                                        <Rectangle Width="20" Height="4" Canvas.Top="4" Fill="White"/>
+                                        <Rectangle Width="6" Height="12" Canvas.Left="7" Fill="White"/>
+                                        <Rectangle Width="20" Height="2" Canvas.Top="5" Fill="#D8424A"/>
+                                        <Rectangle Width="3" Height="12" Canvas.Left="8.5" Fill="#D8424A"/>
+                                    </Canvas>
+                                </Border>
+                                <TextBlock Text="EN" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RussianButton" ToolTip="Русский"
+                                Style="{StaticResource SegmentButtonStyle}" Click="OnRussianClick">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="20" Height="12" ClipToBounds="True" Margin="0,0,6,0"
+                                        VerticalAlignment="Center">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="4"/><RowDefinition Height="4"/><RowDefinition Height="4"/>
+                                        </Grid.RowDefinitions>
+                                        <Rectangle Grid.Row="0" Fill="White"/>
+                                        <Rectangle Grid.Row="1" Fill="#3156A0"/>
+                                        <Rectangle Grid.Row="2" Fill="#D83C48"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="RU" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
             </Grid>
-            <StackPanel Grid.Row="2" Margin="0,12,0,0">
-                <Button x:Name="DiagnosticsButton" Content="Export diagnostics…" Height="34"
-                        Style="{StaticResource LanguageButtonStyle}"
-                        AutomationProperties.AutomationId="ExportDiagnostics"
-                        Click="OnDiagnosticsClick"/>
-                <TextBlock x:Name="DiagnosticsNote" Margin="0,7,0,0" FontSize="10"
-                           Foreground="{StaticResource Muted}" TextWrapping="Wrap"
+
+            <!-- Hero: ring gauge with the percentage and device name -->
+            <Grid Grid.Row="1" Width="200" Height="200" Margin="0,14,0,0" HorizontalAlignment="Center">
+                <Ellipse x:Name="Glow" Margin="-34"/>
+                <Canvas Width="200" Height="200">
+                    <Ellipse Width="168" Height="168" Canvas.Left="16" Canvas.Top="16"
+                             Stroke="#222D32" StrokeThickness="12"/>
+                    <Path x:Name="ArcPath" StrokeThickness="12" StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round">
+                        <Path.Effect>
+                            <DropShadowEffect x:Name="ArcGlow" BlurRadius="20" ShadowDepth="0" Opacity="0.55"
+                                              Color="#8FE2C9"/>
+                        </Path.Effect>
+                    </Path>
+                </Canvas>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock x:Name="HeroGlyph" Style="{StaticResource Glyph}" Text="&#xE945;" FontSize="15"
+                               HorizontalAlignment="Center" Foreground="{StaticResource Accent}"
+                               Visibility="Hidden"/>
+                    <TextBlock x:Name="PercentText" FontFamily="{StaticResource Display}" FontSize="60"
+                               FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,-8,0,-4"
+                               AutomationProperties.Name="Battery level"><Run x:Name="PercentValue" Text="?"/><Run x:Name="PercentSign" Text="" FontSize="26" Foreground="{StaticResource Muted}"/></TextBlock>
+                    <TextBlock x:Name="DeviceText" Text="LAMZU" FontSize="12" HorizontalAlignment="Center"
+                               Foreground="{StaticResource Muted}" MaxWidth="130" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- State pill -->
+            <Border x:Name="StatePill" Grid.Row="2" HorizontalAlignment="Center" CornerRadius="14"
+                    Padding="13,6,14,6" Margin="0,8,0,0" Background="#1F2A2E">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse x:Name="StateDot" Width="7" Height="7" Margin="0,1,8,0" VerticalAlignment="Center"
+                             Fill="{StaticResource Muted}"/>
+                    <TextBlock x:Name="StateText" Text="Waiting for data" FontSize="12.5" MaxWidth="290"
+                               Foreground="{StaticResource Muted}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Metrics -->
+            <Grid Grid.Row="3" Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}" Padding="16,13,16,14">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xEC4A;" FontSize="13"
+                                       Foreground="{StaticResource Accent}" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="RateHeading" Text="Drain rate" Style="{StaticResource MetricLabel}"/>
+                        </StackPanel>
+                        <TextBlock x:Name="RateText" Text="···" Style="{StaticResource MetricValue}"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="16,13,16,14">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE823;" FontSize="13"
+                                       Foreground="{StaticResource Accent}" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="RemainingHeading" Text="Remaining" Style="{StaticResource MetricLabel}"/>
+                        </StackPanel>
+                        <TextBlock x:Name="HoursText" Text="···" Style="{StaticResource MetricValue}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <TextBlock x:Name="NoteText" Grid.Row="4" Margin="2,14,2,0"
+                       Text="An estimate will appear after the battery level changes."
+                       FontSize="12" LineHeight="17" MinHeight="34" Foreground="{StaticResource Muted}"
+                       TextWrapping="Wrap"/>
+
+            <!-- Last check and refresh -->
+            <Border Grid.Row="5" Style="{StaticResource CardStyle}" Margin="0,14,0,0" Padding="16,9,9,9">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="UpdatedText" Text="The first check has not finished"
+                               Foreground="{StaticResource Muted}" FontSize="11.5"
+                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Button x:Name="RefreshButton" Grid.Column="1" Height="34" MinWidth="126"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            AutomationProperties.Name="Refresh mouse battery level" Click="OnRefreshClick">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE72C;" FontSize="12"
+                                       FontWeight="Normal" Margin="0,1,8,0"/>
+                            <TextBlock x:Name="RefreshLabel" Text="Refresh" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Diagnostics and version -->
+            <Grid Grid.Row="6" Margin="-8,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Button x:Name="DiagnosticsButton" Style="{StaticResource LinkButtonStyle}"
+                        AutomationProperties.AutomationId="ExportDiagnostics" Click="OnDiagnosticsClick">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE9D9;" FontSize="13" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="DiagnosticsLabel" Text="Export diagnostics…" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock x:Name="VersionText" Grid.Column="1" Text="v0.0.0" FontSize="11"
+                           Foreground="#6B7C80" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <TextBlock x:Name="DiagnosticsNote" Grid.Row="1" Grid.ColumnSpan="2" Margin="10,3,0,0"
+                           FontSize="10.5" Foreground="#6B7C80" TextWrapping="Wrap"
                            Text="Local ZIP report. Nothing is uploaded."/>
-            </StackPanel>
+            </Grid>
         </Grid>
     </Grid>
-    </ScrollViewer>
 </Window>

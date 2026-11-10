@@ -6,9 +6,13 @@ MayaX-Battery is a Windows utility for the LAMZU Maya X. The GitHub repository i
 
 - `src/Program.cs`: startup, single-instance behavior, command-line options and preview commands.
 - `src/TrayApp.cs`: polling, tray lifecycle and window coordination.
+- `src/TrayMenu.cs`: tray menu items, shared by the app and `--menu-preview`.
+- `src/AppInfo.cs`: displayed version and the releases link.
 - `src/DetailsWindow.xaml` and `.xaml.cs`: details window.
 - `src/TrayMenuRenderer.cs`: menu rendering and layout.
-- `src/Battery.cs` and `src/Hid.cs`: protocol and Windows device access.
+- `src/Battery.cs` and `src/Hid.cs`: protocol, failure codes, charge states and Windows device access.
+- `src/LowBatteryAlert.cs`: when a low or critical reading is announced.
+- `src/Autostart.cs`: the per-user "Start with Windows" entry.
 - `src/RuntimeEstimate.cs`: observation history and runtime estimate.
 - `tests/Program.cs`: executable regression checks, not an xUnit or NUnit project.
 - `tools/Build-Release.ps1`: self-contained, single-file Windows x64 package and smoke check.
@@ -18,8 +22,9 @@ Read the relevant files and current diff before changing them. Keep unrelated ed
 
 ## Behavior to preserve
 
-- A normal launch opens the details window and starts the tray icon. Closing the details window leaves the tray running; Exit ends the application. A second normal launch brings the existing window forward. Startup shortcuts use `--tray` to leave the app in the tray; repeated `--tray` launches must not open a window. Keep ordinary launches without this argument.
-- An unreadable device is not evidence that the user is inactive. Do not convert failures into zero-percent readings.
+- A normal launch opens the details window and starts the tray icon. Closing the details window leaves the tray running; Exit ends the application. A second normal launch brings the existing window forward. Startup shortcuts use `--tray` to leave the app in the tray; repeated `--tray` launches must not open a window. Keep ordinary launches without this argument. The "Start with Windows" menu item writes a per-user Run entry that always carries `--tray`; tests and previews must not read or change it.
+- An unreadable device is not evidence that the user is inactive. Do not convert failures into zero-percent readings or low battery notifications.
+- Read failures travel as the language-independent codes in `ReadError`; only `UiStrings` turns them into text. Charge thresholds live in `Reading.State` and are shared by the icon, menu, window and notification.
 - Only battery reads are implemented. Do not add pairing, firmware, EEPROM or configuration commands without a specific request and protocol evidence.
 - Hardware support beyond Maya X must be described as unverified until tested on the actual device.
 - Runtime estimates use observed discharge, not user activity. Preserve the gaps, charge boundaries and sensor-jitter handling covered by tests.

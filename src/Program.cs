@@ -133,7 +133,7 @@ internal static class Program
                     rate: 1.8, estimateNote: observed);
                 break;
             case "error":
-                window.UpdateReading(Reading.Fail("мышь не отвечает"), now, null, false);
+                window.UpdateReading(Reading.Fail(ReadError.NoResponse), now, null, false);
                 break;
             default:
                 throw new ArgumentException($"Unknown UI preview state: {state}");
@@ -165,25 +165,16 @@ internal static class Program
 
     static void WriteMenuPreview(string path, UiLanguage language, bool showSubmenu)
     {
+        // Demonstration values only: the preview never reads the device or the startup entry.
         var text = new UiStrings(language);
-        using var menu = new ContextMenuStrip();
-        menu.Items.Add(new ToolStripMenuItem(text.OpenApp));
-        menu.Items.Add(new ToolStripMenuItem("LAMZU Maya X: 78%") { Enabled = false });
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(new ToolStripMenuItem(text.RefreshNow));
-        menu.Items.Add(new ToolStripMenuItem(text.ExportDiagnostics));
-        var languageMenu = new ToolStripMenuItem(text.LanguageMenu);
-        languageMenu.DropDownItems.Add(new ToolStripMenuItem("EN")
-            { Tag = UiLanguage.English, Checked = language == UiLanguage.English });
-        languageMenu.DropDownItems.Add(new ToolStripMenuItem("RU")
-            { Tag = UiLanguage.Russian, Checked = language == UiLanguage.Russian });
-        menu.Items.Add(languageMenu);
-        menu.Items.Add(new ToolStripMenuItem(text.Exit));
-        TrayMenuRenderer.Configure(menu);
+        using var tray = new TrayMenu(text);
+        tray.SetStatus(new MenuStatus("LAMZU Maya X", text.ChargeSummary(78, false, 43), 78, ChargeState.Normal));
+        tray.Autostart.Checked = true;
+        var menu = tray.Strip;
+        var languageMenu = tray.Language;
         menu.Show(new Point(60, 60));
-        if (showSubmenu) languageMenu.Select();
-        else menu.Items[3].Select();
-        if (showSubmenu) languageMenu.ShowDropDown();
+        if (showSubmenu) { languageMenu.Select(); languageMenu.ShowDropDown(); }
+        else tray.Refresh.Select();
         System.Windows.Forms.Application.DoEvents();
         int childWidth = showSubmenu ? languageMenu.DropDown.Width : 0;
         using var image = new Bitmap(menu.Width + childWidth, Math.Max(menu.Height,
@@ -204,5 +195,3 @@ internal static class Program
         menu.Close();
     }
 }
-
-

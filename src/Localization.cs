@@ -74,8 +74,6 @@ internal sealed class UiStrings
     }
 
     internal string BatteryHeading => Ru ? "ЗАРЯД БАТАРЕИ" : "BATTERY LEVEL";
-    internal string BatteryAutomation => Ru ? "Заряд батареи" : "Battery level";
-    internal string MouseIconAutomation => Ru ? "Значок мыши" : "Mouse icon";
     internal string UnknownCharge => Ru ? "Заряд неизвестен" : "Battery level unknown";
     internal string ChargeAutomation(int percent) => Ru ? $"Заряд {percent}%" : $"Battery level {percent}%";
     internal string WaitingForData => Ru ? "Ожидание данных" : "Waiting for data";
@@ -87,7 +85,9 @@ internal sealed class UiStrings
     internal string Rate(double rate) => rate.ToString("0.#", Culture) + (Ru ? " %/ч" : " %/h");
     internal string RemainingMinutes(double minutes) => "≈ " + Math.Max(1, minutes).ToString("0", Culture) + (Ru ? " мин" : " min");
     internal string RemainingHours(double hours) => "≈ " + hours.ToString("0", Culture) + (Ru ? " ч" : " h");
-    internal string WakeMouse => Ru ? "Разбудите мышь и проверьте приёмник." : "Wake the mouse and check the receiver.";
+    // 59.7 minutes must read as one hour, not as "60 min".
+    internal string Remaining(double hours) => Math.Round(hours * 60) < 60 ? RemainingMinutes(hours * 60) : RemainingHours(hours);
+    internal string WindowTitle(string device) => $"{device} · {(Ru ? "Батарея" : "Battery")}";
     internal string EstimateAfterDischarge => Ru ? "Прогноз обновится после начала разряда." : "The estimate will update when discharging starts.";
     internal string ApproximateEstimate => Ru ? "Приблизительная оценка по наблюдаемому расходу." : "Approximate estimate based on observed drain.";
     internal string EstimateAfterChange => Ru ? "Оценка появится после изменения заряда." : "An estimate will appear after the battery level changes.";
@@ -96,6 +96,7 @@ internal sealed class UiStrings
         ? $"Проверено {time.ToString("HH:mm", Culture)} · опрос {seconds} с"
         : $"Checked {time.ToString("HH:mm", Culture)} · every {seconds} s";
     internal string Refresh => Ru ? "Обновить" : "Refresh";
+    internal string RefreshHint => Ru ? "Проверить заряд сейчас (F5)" : "Check the battery now (F5)";
     internal string RefreshAutomation => Ru ? "Обновить заряд мыши" : "Refresh mouse battery level";
     internal string Checking => Ru ? "Проверяем…" : "Checking…";
     internal string ExportDiagnostics => Ru ? "Экспорт диагностики…" : "Export diagnostics…";
@@ -113,22 +114,29 @@ internal sealed class UiStrings
     internal string RefreshNow => Ru ? "Обновить сейчас" : "Refresh now";
     internal string Exit => Ru ? "Выход" : "Exit";
     internal string LanguageMenu => Ru ? "Язык" : "Language";
+    internal string StartWithWindows => Ru ? "Запускать с Windows" : "Start with Windows";
+    internal string AutostartFailed => Ru ? "Не удалось изменить автозапуск. Распакуйте приложение в постоянную папку и повторите." : "Could not change the startup setting. Extract the app to a permanent folder and try again.";
+    internal string LowBatteryAlert => Ru ? "Низкий заряд. Подключите кабель." : "Low battery. Connect the cable.";
+    internal string CriticalBatteryAlert => Ru ? "Заряд почти закончился. Подключите кабель." : "Battery almost empty. Connect the cable.";
     internal string StatusUnavailable => Ru ? "Мышь: нет данных" : "Mouse: no data";
-    internal string TrayPolling => Ru ? "Заряд мыши · опрашиваю…" : "Mouse battery · checking…";
-    internal string TrayStatus(string device, int percent, bool charging) =>
-        $"{device}: {percent}%{(charging ? Ru ? " · зарядка" : " · charging" : "")}";
-    internal string AlreadyRunning => Ru ? "MayaX-Battery уже запущен." : "MayaX-Battery is already running.";
+    internal string ChargeSummary(int percent, bool charging, double? hours = null) =>
+        $"{percent}%" + (charging ? Ru ? " · зарядка" : " · charging"
+            : hours is >= 0 ? " · " + Remaining(hours.Value) : "");
+    internal string TrayStatus(string device, int percent, bool charging, double? hours = null) =>
+        $"{device}: {ChargeSummary(percent, charging, hours)}";
+    internal string VersionLabel(string version) => (Ru ? "Версия " : "Version ") + version;
+    internal string ReleasesHint => Ru ? "Открыть страницу релизов" : "Open the releases page";
     internal string ReadFailure(string exceptionName) => Ru ? $"Ошибка чтения: {exceptionName}" : $"Read error: {exceptionName}";
     internal string DeviceError(string error)
     {
-        if (error?.StartsWith("read-error:", StringComparison.Ordinal) == true)
-            return ReadFailure(error[11..]);
+        if (error?.StartsWith(ReadError.ExceptionPrefix, StringComparison.Ordinal) == true)
+            return ReadFailure(error[ReadError.ExceptionPrefix.Length..]);
         return error switch
         {
-            "устройство не найдено" => Ru ? "Устройство не найдено" : "Device not found",
-            "мышь не отвечает" or "Нет ответа от мыши" => Ru ? "Мышь не отвечает" : "Mouse is not responding",
-            "Ожидание первого опроса" => FirstPollPending,
-            "diagnostic-only" => DiagnosticMode,
+            ReadError.DeviceNotFound => Ru ? "Устройство не найдено" : "Device not found",
+            ReadError.NoResponse => Ru ? "Мышь не отвечает" : "Mouse is not responding",
+            ReadError.Pending => FirstPollPending,
+            ReadError.DiagnosticOnly => DiagnosticMode,
             _ => error
         };
     }
@@ -139,7 +147,7 @@ internal sealed class UiStrings
         var hours = observedHours.ToString("F1", Culture);
         if (Ru)
             return hasRate
-                ? $"По {hours} ч наблюдений · снижение на {drop} п.п.\nПри прежнем режиме использования; долгие паузы исключены."
+                ? $"По {hours} ч наблюдений · снижение на {drop} п.п.\nПри схожем использовании; долгие паузы исключены."
                 : $"Наблюдения: {hours} ч · снижение на {drop} п.п.\n" +
                   (observedHours < .5 ? "Для оценки: 30 мин наблюдений и снижение на 2 п.п." : "Ждём снижения заряда на 2 п.п. для оценки.");
         return hasRate

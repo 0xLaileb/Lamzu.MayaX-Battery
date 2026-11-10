@@ -17,7 +17,8 @@
     <Compile Include="../src/DiagnosticCommand.cs" Link="DiagnosticCommand.cs" />
     <Compile Include="../src/DiagnosticLog.cs" Link="DiagnosticLog.cs" />
     <Compile Include="../src/IconFactory.cs" Link="IconFactory.cs" />
-    <Compile Include="../src/PixelFont.cs" Link="PixelFont.cs" />
+    <Compile Include="../src/LowBatteryAlert.cs" Link="LowBatteryAlert.cs" />
+    <Compile Include="../src/Autostart.cs" Link="Autostart.cs" />
+    <Compile Include="../src/AppInfo.cs" Link="AppInfo.cs" />
   </ItemGroup>
 </Project>
-

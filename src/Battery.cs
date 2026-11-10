@@ -1,8 +1,25 @@
 namespace MayaXBattery;
 
+internal enum ChargeState { Unknown, Charging, Normal, Low, Critical }
+
+/// <summary>Language-independent failure codes. The UI translates them; logs and tests compare them.</summary>
+internal static class ReadError
+{
+    internal const string Pending = "pending";
+    internal const string DeviceNotFound = "device-not-found";
+    internal const string NoResponse = "no-response";
+    internal const string DiagnosticOnly = "diagnostic-only";
+    internal const string ExceptionPrefix = "read-error:";
+}
+
 internal readonly record struct Reading(int Percent, bool Charging, string Device, string Error)
 {
+    internal const int LowPercent = 20, CriticalPercent = 10;
+
     internal bool Ok => Error == null;
+    internal ChargeState State => !Ok ? ChargeState.Unknown : Charging ? ChargeState.Charging
+        : Percent > LowPercent ? ChargeState.Normal : Percent > CriticalPercent ? ChargeState.Low
+        : ChargeState.Critical;
     internal static Reading Fail(string why) => new(0, false, null, why);
 }
 
@@ -45,7 +62,7 @@ internal sealed class CompxSource
         if (path == null && !Locate(out path, out name))
         {
             DiagnosticLog.Record("poll.locate", "no-supported-collection", watch.ElapsedMilliseconds);
-            return Reading.Fail("устройство не найдено");
+            return Reading.Fail(ReadError.DeviceNotFound);
         }
 
         // Up to four attempts: the dongle occasionally answers with a stale or empty frame,
@@ -54,9 +71,9 @@ internal sealed class CompxSource
         {
             var tx = new byte[ReportLen];
             tx[0] = 0;               // report ID
-            tx[3] = 2;               // payload[2] — device id
-            tx[4] = 2;               // payload[3] — payload length
-            tx[6] = OpReadBattery;   // payload[5] — opcode
+            tx[3] = 2;               // payload[2]: device id
+            tx[4] = 2;               // payload[3]: payload length
+            tx[6] = OpReadBattery;   // payload[5]: opcode
 
             var rx = Hid.FeatureExchange(path, tx, ReportLen, 100, attempt + 1);
             if (rx == null)
@@ -67,7 +84,7 @@ internal sealed class CompxSource
                 if (!Locate(out path, out name))
                 {
                     DiagnosticLog.Record("poll.relocate", "no-supported-collection", watch.ElapsedMilliseconds, attempt + 1, path: path);
-                    return Reading.Fail("устройство не найдено");
+                    return Reading.Fail(ReadError.DeviceNotFound);
                 }
                 continue;
             }
@@ -89,7 +106,7 @@ internal sealed class CompxSource
         _cachedPath = path;
         _cachedName = name;
         DiagnosticLog.Record("poll.result", "retries-exhausted", watch.ElapsedMilliseconds, 4, path: path);
-        return Reading.Fail("мышь не отвечает");
+        return Reading.Fail(ReadError.NoResponse);
     }
 
     internal static bool TryParse(byte[] rx, out int percent, out bool charging)
@@ -138,4 +155,3 @@ internal sealed class CompxSource
         return false;
     }
 }
-

@@ -32,14 +32,18 @@ internal sealed class RuntimeEstimate
             _history = loaded;
             // Restart always breaks continuity: an unobserved charge may have happened.
         }
-        catch (Exception ex) when (IsStorageError(ex)) { _loadProblem = true; }
+        catch (Exception ex) when (IsStorageError(ex))
+        {
+            _loadProblem = true;
+            // The next save replaces the file, so keep the unreadable one for inspection.
+            try { File.Copy(path, path + ".bad", overwrite: true); }
+            catch (Exception copyError) when (IsStorageError(copyError)) { }
+        }
     }
 
     internal double ObservedHours => _history.Segments.Sum(s => (s.End - s.Start).TotalHours);
     internal int Drop => _history.Segments.Sum(s => s.Initial - s.Minimum);
     internal double? Rate => ObservedHours >= .5 && Drop >= 2 ? Drop / ObservedHours : null;
-    internal string Note => GetNote(UiLanguage.Russian);
-
     internal string GetNote(UiLanguage language)
     {
         var text = new UiStrings(language);

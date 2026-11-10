@@ -1,8 +1,11 @@
+using Microsoft.Win32;
+
 namespace MayaXBattery;
 
 internal sealed class TrayApp : ApplicationContext
 {
     readonly PollSchedule _schedule = new();
+    readonly LowBatteryAlert _alert = new();
     readonly NotifyIcon _tray;
     readonly System.Windows.Forms.Timer _timer;
     readonly System.Windows.Forms.Timer _activationTimer;
@@ -11,24 +14,17 @@ internal sealed class TrayApp : ApplicationContext
     readonly RuntimeEstimate _estimate;
     readonly SemaphoreSlim _deviceGate = new(1, 1);
     readonly bool _diagnosticsOnly;
-    readonly ToolStripMenuItem _status;
-    readonly ToolStripMenuItem _refresh;
-    readonly ToolStripMenuItem _open;
-    readonly ToolStripMenuItem _exit;
-    readonly ToolStripMenuItem _diagnostics;
-    readonly ToolStripMenuItem _languageMenu;
-    readonly ToolStripMenuItem _english;
-    readonly ToolStripMenuItem _russian;
-    readonly ContextMenuStrip _menu;
+    readonly TrayMenu _menu;
     readonly string _settingsPath = LanguageSettings.DefaultPath;
     UiLanguage _language;
     UiStrings _text;
     Icon _currentIcon;
     DetailsWindow _window;
-    Reading _reading = Reading.Fail("Ожидание первого опроса");
+    Reading _reading = Reading.Fail(ReadError.Pending);
     DateTimeOffset? _checked;
     double? _hours;
     bool _busy, _quitting, _exporting;
+    volatile bool _themeChanged;
     string _diagnosticResult;
 
     internal TrayApp(bool showWindow, EventWaitHandle showRequested, bool diagnosticsOnly = false,
@@ -37,39 +33,33 @@ internal sealed class TrayApp : ApplicationContext
         _diagnosticsOnly = diagnosticsOnly;
         _estimate = new RuntimeEstimate(diagnosticsOnly ? null : AppStorage.HistoryPath);
         _showRequested = showRequested;
-        _language = diagnosticsOnly ? diagnosticLanguage ?? LanguageSettings.DefaultFor(System.Globalization.CultureInfo.CurrentUICulture)
-            : LanguageSettings.Load(_settingsPath, System.Globalization.CultureInfo.CurrentUICulture);
-        if (diagnosticsOnly) _reading = Reading.Fail("diagnostic-only");
+        var culture = System.Globalization.CultureInfo.CurrentUICulture;
+        _language = diagnosticsOnly ? diagnosticLanguage ?? LanguageSettings.DefaultFor(culture)
+            : LanguageSettings.Load(_settingsPath, culture);
+        if (diagnosticsOnly) _reading = Reading.Fail(ReadError.DiagnosticOnly);
         _text = new UiStrings(_language);
-        _status = new ToolStripMenuItem(diagnosticsOnly ? _text.DiagnosticMode : _text.PollingMouse) { Enabled = false };
-        _refresh = new ToolStripMenuItem(_text.RefreshNow, null, async (_, _) => await Refresh());
-        _open = new ToolStripMenuItem(_text.OpenApp, null, (_, _) => ShowDetails());
-        _exit = new ToolStripMenuItem(_text.Exit, null, (_, _) => ExitThread());
-        _diagnostics = new ToolStripMenuItem(_text.ExportDiagnostics, null, async (_, _) => await ExportDiagnostics());
-        _english = new ToolStripMenuItem("EN", null, (_, _) => ChangeLanguage(UiLanguage.English)) { Tag = UiLanguage.English, ToolTipText = "English" };
-        _russian = new ToolStripMenuItem("RU", null, (_, _) => ChangeLanguage(UiLanguage.Russian)) { Tag = UiLanguage.Russian, ToolTipText = "Русский" };
-        _languageMenu = new ToolStripMenuItem(_text.LanguageMenu);
-        _languageMenu.DropDownItems.AddRange([_english, _russian]);
-        _menu = new ContextMenuStrip();
-        _menu.Items.Add(_open);
-        _menu.Items.Add(_status);
-        _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add(_refresh);
-        _menu.Items.Add(_diagnostics);
-        _menu.Items.Add(_languageMenu);
-        _menu.Items.Add(_exit);
-        TrayMenuRenderer.Configure(_menu);
-        UpdateLanguageChecks();
+        // The passive diagnostic instance must not change how the ordinary app starts.
+        _menu = new TrayMenu(_text, showAutostart: !diagnosticsOnly);
+        _menu.Open.Click += (_, _) => ShowDetails();
+        _menu.Refresh.Click += async (_, _) => await Refresh();
+        _menu.Autostart.Click += (_, _) => ToggleAutostart();
+        _menu.English.Click += (_, _) => ChangeLanguage(UiLanguage.English);
+        _menu.Russian.Click += (_, _) => ChangeLanguage(UiLanguage.Russian);
+        _menu.Diagnostics.Click += async (_, _) => await ExportDiagnostics();
+        _menu.Exit.Click += (_, _) => ExitThread();
+        // The entry can be changed outside the app, so read it whenever the menu opens.
+        _menu.Strip.Opening += (_, _) => _menu.Autostart.Checked = !_diagnosticsOnly && Autostart.IsEnabled();
         _currentIcon = IconFactory.Build("?", Palette.Unknown);
-        _tray = new NotifyIcon { Icon = _currentIcon, Text = diagnosticsOnly ? _text.DiagnosticMode : _text.TrayPolling,
-            Visible = true, ContextMenuStrip = _menu };
-        _tray.MouseDoubleClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowDetails(); };
+        _tray = new NotifyIcon { Icon = _currentIcon, Visible = true, ContextMenuStrip = _menu.Strip };
+        _tray.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowDetails(); };
+        UpdateTrayStatus();
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
         // Start after the UI message loop has installed its synchronization context.
         _timer = new System.Windows.Forms.Timer { Interval = 1 };
         _timer.Tick += async (_, _) =>
         {
             if (showWindow) { showWindow = false; ShowDetails(); }
-            if (_diagnosticsOnly) { _timer.Stop(); _refresh.Enabled = false; }
+            if (_diagnosticsOnly) { _timer.Stop(); _menu.Refresh.Enabled = false; }
             else await Refresh();
         };
         _timer.Start();
@@ -77,12 +67,14 @@ internal sealed class TrayApp : ApplicationContext
         _activationTimer.Tick += (_, _) =>
         {
             if (_showRequested.WaitOne(0)) ShowDetails();
+            if (_themeChanged) { _themeChanged = false; UpdateIcon(); }
         };
         _activationTimer.Start();
     }
 
     void ShowDetails()
     {
+        if (_quitting) return;
         if (_window == null)
         {
             _window = new DetailsWindow(_language);
@@ -103,63 +95,81 @@ internal sealed class TrayApp : ApplicationContext
         if (_busy || _quitting || _exporting || _diagnosticsOnly) return;
         _busy = true;
         _timer.Stop();
-        _refresh.Enabled = false;
+        _menu.Refresh.Enabled = false;
         UpdateWindow();
         try
         {
             Reading result;
             await _deviceGate.WaitAsync();
             try { result = await Task.Run(_source.Read); }
-            catch (Exception ex) { result = Reading.Fail($"read-error:{ex.GetType().Name}"); }
+            catch (Exception ex) { result = Reading.Fail(ReadError.ExceptionPrefix + ex.GetType().Name); }
             finally { _deviceGate.Release(); }
             if (_quitting) return;
             _reading = result;
             _schedule.Observe(result.Ok);
             _checked = DateTimeOffset.Now;
             _hours = _estimate.Observe(result, _checked.Value);
-            var palette = !result.Ok ? Palette.Unknown : result.Charging ? Palette.Charging
-                : result.Percent > 20 ? Palette.Normal : result.Percent > 10 ? Palette.Low : Palette.Critical;
-            var icon = IconFactory.Build(result.Ok ? result.Percent.ToString() : "?", palette);
-            var old = _currentIcon;
-            _tray.Icon = icon;
-            _currentIcon = icon;
-            old.Dispose();
+            UpdateIcon();
             UpdateTrayStatus();
+            if (_alert.Observe(result) is ChargeState level) ShowLowBatteryAlert(level);
         }
         finally
         {
             _busy = false;
             if (!_quitting)
             {
-                _refresh.Enabled = !_exporting;
-                if (!_exporting)
-                {
-                    _timer.Interval = _schedule.DelaySeconds * 1000;
-                    _timer.Start();
-                }
+                _menu.Refresh.Enabled = !_exporting;
+                if (!_exporting) RestartTimer();
                 UpdateWindow();
             }
         }
     }
 
-    void UpdateWindow()
+    void RestartTimer()
     {
-        if (_window != null)
-        {
-            _window.UpdateReading(_reading, _checked, _hours, _busy, _schedule.DelaySeconds,
-                _estimate.Rate, _estimate.GetNote(_language));
-            if (_exporting || _diagnosticsOnly) _window.RefreshButton.IsEnabled = false;
-            _window.SetDiagnosticState(_exporting, _diagnosticResult);
-        }
+        _timer.Interval = _schedule.DelaySeconds * 1000;
+        _timer.Start();
     }
+
+    void UpdateIcon()
+    {
+        var icon = IconFactory.Build(_reading.Ok ? _reading.Percent.ToString() : "?",
+            Palette.For(_reading.State));
+        var old = _currentIcon;
+        _tray.Icon = icon;
+        _currentIcon = icon;
+        old.Dispose();
+    }
+
+    // The numerals have a light-taskbar variant. This event can arrive on another thread, so it
+    // only raises a flag; the UI timer redraws the icon without waiting for the next poll.
+    void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category == UserPreferenceCategory.General) _themeChanged = true;
+    }
+
+    void ShowLowBatteryAlert(ChargeState level) => _tray.ShowBalloonTip(5000,
+        _text.TrayStatus(ShortName(_reading.Device), _reading.Percent, false),
+        level == ChargeState.Critical ? _text.CriticalBatteryAlert : _text.LowBatteryAlert,
+        ToolTipIcon.Warning);
+
+    void ToggleAutostart()
+    {
+        if (Autostart.Set(!Autostart.IsEnabled())) return;
+        System.Windows.Forms.MessageBox.Show(_text.AutostartFailed, "MayaX-Battery",
+            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+
+    void UpdateWindow() => _window?.UpdateReading(_reading, _checked, _hours, _busy, _schedule.DelaySeconds,
+        _estimate.Rate, _estimate.GetNote(_language), _exporting, _diagnosticResult);
 
     async Task ExportDiagnostics()
     {
         if (_exporting || _quitting) return;
         _exporting = true;
         _timer.Stop();
-        _diagnostics.Enabled = false;
-        _refresh.Enabled = false;
+        _menu.Diagnostics.Enabled = false;
+        _menu.Refresh.Enabled = false;
         _diagnosticResult = null;
         UpdateWindow();
         bool acquired = false;
@@ -202,13 +212,9 @@ internal sealed class TrayApp : ApplicationContext
             _exporting = false;
             if (!_quitting)
             {
-                _diagnostics.Enabled = true;
-                _refresh.Enabled = !_busy && !_diagnosticsOnly;
-                if (!_busy && !_diagnosticsOnly)
-                {
-                    _timer.Interval = _schedule.DelaySeconds * 1000;
-                    _timer.Start();
-                }
+                _menu.Diagnostics.Enabled = true;
+                _menu.Refresh.Enabled = !_busy && !_diagnosticsOnly;
+                if (!_busy && !_diagnosticsOnly) RestartTimer();
                 UpdateWindow();
             }
         }
@@ -229,30 +235,23 @@ internal sealed class TrayApp : ApplicationContext
         _text = new UiStrings(language);
         if (!_diagnosticsOnly) LanguageSettings.Save(_settingsPath, language);
         _diagnosticResult = null;
-        _open.Text = _text.OpenApp;
-        _refresh.Text = _text.RefreshNow;
-        _diagnostics.Text = _text.ExportDiagnostics;
-        _languageMenu.Text = _text.LanguageMenu;
-        _exit.Text = _text.Exit;
-        UpdateLanguageChecks();
+        _menu.Apply(_text);
         UpdateTrayStatus();
         _window?.SetLanguage(language);
         UpdateWindow();
     }
 
-    void UpdateLanguageChecks()
-    {
-        _english.Checked = _language == UiLanguage.English;
-        _russian.Checked = _language == UiLanguage.Russian;
-    }
-
     void UpdateTrayStatus()
     {
         var status = _diagnosticsOnly ? _text.DiagnosticMode : _reading.Ok
-            ? _text.TrayStatus(ShortName(_reading.Device), _reading.Percent, _reading.Charging)
+            ? _text.TrayStatus(ShortName(_reading.Device), _reading.Percent, _reading.Charging, _hours)
             : _checked.HasValue ? _text.StatusUnavailable : _text.PollingMouse;
-        _tray.Text = status.Length <= 63 ? status : status[..60] + "…";
-        _status.Text = status;
+        // Keep the notification-area tooltip within the classic 63-character limit.
+        _tray.Text = status.Length <= 63 ? status : status[..62] + "…";
+        _menu.SetStatus(_reading.Ok
+            ? new MenuStatus(ShortName(_reading.Device),
+                _text.ChargeSummary(_reading.Percent, _reading.Charging, _hours), _reading.Percent, _reading.State)
+            : new MenuStatus("MayaX-Battery", status, null, ChargeState.Unknown));
     }
 
     internal static string ShortName(string product)
@@ -267,6 +266,7 @@ internal sealed class TrayApp : ApplicationContext
     protected override void ExitThreadCore()
     {
         _quitting = true;
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         _timer.Stop();
         _timer.Dispose();
         _activationTimer.Stop();
@@ -279,4 +279,3 @@ internal sealed class TrayApp : ApplicationContext
         base.ExitThreadCore();
     }
 }
-

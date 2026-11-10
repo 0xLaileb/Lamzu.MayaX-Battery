@@ -5,9 +5,9 @@ description: Verify MayaX-Battery language switching, settings behavior, WPF lay
 
 # MayaX-Battery UI checks
 
-Read the changed UI code and `src/Program.cs` preview arguments. Keep the dark slate and mint palette unless the task asks for a redesign.
+Read the changed UI code and `src/Program.cs` preview arguments. Keep the dark slate and mint palette, the ring gauge and the Segoe icon-font glyphs unless the task asks for a redesign.
 
-- Check English and Russian text, including errors, history notes, tooltip text, accessibility names and the single-instance message. Numeric formatting must follow the selected language.
+- Check English and Russian text, including errors, history notes, tooltip text, notifications and accessibility names. Numeric formatting must follow the selected language.
 - Language selection should update the open window and tray immediately. Confirm preference persistence with disposable settings files, including corrupt JSON, unsupported language values and inaccessible storage. Do not rewrite the real user's settings for a test.
 - Compare menu text alignment, hover insets, separators, flags and submenu arrows. Inspect a long status label and both language names. Country flags must render without relying on platform emoji fonts.
 - Run the console checks. Generate previews at scale 1 and 2 with explicit `--language en` and `--language ru`; use ignored `artifacts/` paths for extra samples. Preview mode must not access HID or persist settings.

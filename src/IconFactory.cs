@@ -12,11 +12,21 @@ internal readonly record struct Palette(Color Fore, Color LightFore)
     internal static readonly Palette Low = new(Color.FromArgb(255, 214, 10), Color.FromArgb(140, 103, 0));
     internal static readonly Palette Critical = new(Color.FromArgb(255, 69, 58), Color.FromArgb(196, 38, 32));
     internal static readonly Palette Unknown = new(Color.FromArgb(174, 174, 178), Color.FromArgb(99, 99, 102));
+
+    internal static Palette For(ChargeState state) => state switch
+    {
+        ChargeState.Charging => Charging,
+        ChargeState.Normal => Normal,
+        ChargeState.Low => Low,
+        ChargeState.Critical => Critical,
+        _ => Unknown
+    };
 }
+
 internal static class IconFactory
 {
     // Every size the shell may ask for, across DPI settings. Each is drawn natively, so nothing
-    // is ever rescaled — rescaling was what made the icon look soft next to real app icons.
+    // is ever rescaled: rescaling was what made the icon look soft next to real app icons.
     static readonly int[] Sizes = { 16, 20, 24, 28, 32, 40, 48, 64 };
 
     internal static Icon Build(string text, Palette palette)
@@ -76,11 +86,13 @@ internal static class IconFactory
         float x = (size - bounds.Width * scale) / 2f;
         float y = (size - bounds.Height * scale) / 2f;
         using var transform = new Matrix(scale, 0, 0, scale,
-            x - bounds.X * scale, y - bounds.Y * scale);        path.Transform(transform);
+            x - bounds.X * scale, y - bounds.Y * scale);
+        path.Transform(transform);
         using var brush = new SolidBrush(light ? palette.LightFore : palette.Fore);
         g.FillPath(brush, path);
         return bmp;
     }
+
     /// <summary>Writes a classic multi-frame .ico (BITMAPINFOHEADER + 32bpp XOR + 1bpp AND mask).</summary>
     static void WriteIco(Stream stream, List<Bitmap> frames)
     {
@@ -117,12 +129,13 @@ internal static class IconFactory
         int andSize = maskStride * h;
 
         var data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-        var pixels = new byte[Math.Abs(data.Stride) * h];
+        int stride = Math.Abs(data.Stride);
+        var pixels = new byte[stride * h];
         try
         {
             for (int y = 0; y < h; y++)
                 System.Runtime.InteropServices.Marshal.Copy(
-                    data.Scan0 + y * data.Stride, pixels, y * Math.Abs(data.Stride), Math.Abs(data.Stride));
+                    data.Scan0 + y * data.Stride, pixels, y * stride, stride);
         }
         finally { bmp.UnlockBits(data); }
 
@@ -131,7 +144,7 @@ internal static class IconFactory
 
         bw.Write(40);                 // biSize
         bw.Write(w);                  // biWidth
-        bw.Write(h * 2);              // biHeight — XOR and AND stacked
+        bw.Write(h * 2);              // biHeight: XOR and AND stacked
         bw.Write((ushort)1);          // biPlanes
         bw.Write((ushort)32);         // biBitCount
         bw.Write(0);                  // BI_RGB
@@ -139,7 +152,6 @@ internal static class IconFactory
         bw.Write(0); bw.Write(0); bw.Write(0); bw.Write(0);
 
         // XOR bitmap, bottom-up; GDI+ 32bppArgb is already BGRA in memory
-        int stride = Math.Abs(data.Stride);
         for (int y = h - 1; y >= 0; y--)
             bw.Write(pixels, y * stride, w * 4);
 
@@ -150,7 +162,3 @@ internal static class IconFactory
         return ms.ToArray();
     }
 }
-
-
-
-

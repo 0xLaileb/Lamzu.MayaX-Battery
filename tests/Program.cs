@@ -24,6 +24,7 @@ foreach (var bytes in new[] { Array.Empty<byte>(), new byte[7], new byte[8], (by
 var now = DateTimeOffset.UtcNow;
 Reading R(int value, bool charging = false, string device = "Maya") => new(value, charging, device, null);
 bool Near(double? actual, double expected) => actual.HasValue && Math.Abs(actual.Value - expected) < .000001;
+string Note(RuntimeEstimate source) => source.GetNote(UiLanguage.English);
 
 var estimate = new RuntimeEstimate();
 Check(estimate.Observe(R(80), now) == null, "First sample has no estimate");
@@ -122,9 +123,24 @@ try
         "Battery heading has both languages");
     Check(englishText.Rate(1.8).Contains("1.8") && russianText.Rate(1.8).Contains("1,8"),
         "Numeric UI formatting follows selected language");
-    Check(englishText.DeviceError("мышь не отвечает") == "Mouse is not responding" &&
-          russianText.DeviceError("мышь не отвечает") == "Мышь не отвечает",
+    Check(englishText.DeviceError(ReadError.NoResponse) == "Mouse is not responding" &&
+          russianText.DeviceError(ReadError.NoResponse) == "Мышь не отвечает",
         "Device errors follow selected language after a read");
+    Check(englishText.DeviceError(ReadError.DeviceNotFound) == "Device not found" &&
+          russianText.DeviceError(ReadError.DeviceNotFound) == "Устройство не найдено" &&
+          russianText.DeviceError(ReadError.Pending) == russianText.FirstPollPending,
+        "Every failure code has a translation");
+    Check(englishText.TrayStatus("Maya X", 78, false, 43) == "Maya X: 78% · ≈ 43 h" &&
+          russianText.TrayStatus("Maya X", 78, false, .5) == "Maya X: 78% · ≈ 30 мин" &&
+          englishText.TrayStatus("Maya X", 78, true, 43) == "Maya X: 78% · charging" &&
+          englishText.TrayStatus("Maya X", 78, false) == "Maya X: 78%" &&
+          russianText.ChargeSummary(78, true) == "78% · зарядка",
+        "Tray status adds the estimate only while discharging");
+    Check(englishText.Remaining(.995) == "≈ 1 h" && englishText.Remaining(.98) == "≈ 59 min",
+        "Remaining time switches to hours instead of showing 60 minutes");
+    Check(englishText.WindowTitle("Maya X") == "Maya X · Battery" &&
+          russianText.WindowTitle("Maya X") == "Maya X · Батарея",
+        "Window title follows language and keeps the device name");
     Check(englishText.DeviceError("read-error:IOException") == "Read error: IOException" &&
           russianText.DeviceError("read-error:IOException") == "Ошибка чтения: IOException",
         "Read exceptions follow selected language after a read");
@@ -195,12 +211,12 @@ try
     }
     Check(Near(blocked.Rate, 4) && Near(blocked.ObservedHours, .5) && blocked.Drop == 2,
         "Failed history writes do not lose in-memory measurements");
-    Check(blocked.Note != healthy.Note && !string.IsNullOrWhiteSpace(blocked.Note),
+    Check(Note(blocked) != Note(healthy) && !string.IsNullOrWhiteSpace(Note(blocked)),
         "Failed history writes are reported in the status note");
     Directory.Delete(blockedTempDirectory);
     blocked.Observe(R(77), now.AddMinutes(40));
     healthy.Observe(R(77), now.AddMinutes(40));
-    Check(File.Exists(blockedPath) && Near(blocked.Rate, healthy.Rate!.Value) && blocked.Note == healthy.Note,
+    Check(File.Exists(blockedPath) && Near(blocked.Rate, healthy.Rate!.Value) && Note(blocked) == Note(healthy),
         "History can be saved after the write obstruction is removed");
     var recovered = new RuntimeEstimate(blockedPath);
     Check(Near(recovered.ObservedHours, blocked.ObservedHours) && recovered.Drop == blocked.Drop,
@@ -244,8 +260,9 @@ try
     var badJsonPath = Path.Combine(fixtureRoot, "bad-json.json");
     File.WriteAllText(badJsonPath, "{not valid json");
     var badJson = new RuntimeEstimate(badJsonPath);
-    var normalNote = new RuntimeEstimate().Note;
-    Check(badJson.Rate == null && badJson.Note != normalNote, "Malformed JSON is reported without crashing");
+    var normalNote = Note(new RuntimeEstimate());
+    Check(badJson.Rate == null && Note(badJson) != normalNote, "Malformed JSON is reported without crashing");
+    Check(File.ReadAllText(badJsonPath + ".bad") == "{not valid json", "Unreadable history is kept beside the new file");
     Check(badJson.Observe(R(80), now) == null, "Malformed history can start a fresh observation");
 
     var corruptPath = Path.Combine(fixtureRoot, "corrupt.json");
@@ -256,7 +273,7 @@ try
         Segments = new[] { new { Start = now.AddMinutes(10), End = now, Initial = 80, Minimum = 78 } }
     }));
     var corrupt = new RuntimeEstimate(corruptPath);
-    Check(corrupt.Rate == null && corrupt.Note != normalNote, "Invalid saved interval is reported without crashing");
+    Check(corrupt.Rate == null && Note(corrupt) != normalNote, "Invalid saved interval is reported without crashing");
     Check(corrupt.Observe(R(80), now) == null, "Invalid saved interval can start a fresh observation");
 }
 finally
@@ -268,7 +285,7 @@ foreach (var size in new[] { 16, 20, 24, 28, 32, 40, 48, 64 })
     foreach (var label in new[] { "?", "7", "18", "87", "100" })
     {
         using var bitmap = IconFactory.Render(label, Palette.Normal, size);
-                bool hasInk = false;
+        bool hasInk = false;
         for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
                 hasInk |= bitmap.GetPixel(x, y).A > 0;
@@ -277,6 +294,48 @@ foreach (var size in new[] { 16, 20, 24, 28, 32, 40, 48, 64 })
 using (var icon = IconFactory.Build("100", Palette.Normal))
 using (var bitmap = icon.ToBitmap())
     Check(bitmap.Width > 0, "Icon usable after source stream disposal");
+Check(R(100).State == ChargeState.Normal && R(21).State == ChargeState.Normal &&
+      R(20).State == ChargeState.Low && R(11).State == ChargeState.Low &&
+      R(10).State == ChargeState.Critical && R(5, charging: true).State == ChargeState.Charging &&
+      Reading.Fail(ReadError.NoResponse).State == ChargeState.Unknown,
+    "Charge state thresholds are shared by the icon, window and menu");
+
+var englishVersion = new UiStrings(UiLanguage.English).VersionLabel("1.2.0");
+var russianVersion = new UiStrings(UiLanguage.Russian).VersionLabel("1.2.0");
+var alert = new LowBatteryAlert();
+Check(alert.Observe(R(50)) == null && alert.Observe(R(21)) == null, "Normal charge raises no alert");
+Check(alert.Observe(R(20)) == ChargeState.Low, "Crossing the low threshold alerts once");
+Check(alert.Observe(R(19)) == null && alert.Observe(R(21)) == null && alert.Observe(R(20)) == null,
+    "Jitter around the low threshold does not repeat the alert");
+Check(alert.Observe(Reading.Fail(ReadError.NoResponse)) == null && alert.Observe(R(18)) == null,
+    "A failed read neither alerts nor re-arms the alert");
+Check(alert.Observe(R(10)) == ChargeState.Critical, "Critical charge alerts separately");
+Check(alert.Observe(R(9)) == null && alert.Observe(R(12)) == null, "Critical alert is not repeated or downgraded");
+Check(alert.Observe(R(12, charging: true)) == null && alert.Observe(R(15)) == null,
+    "A short top-up inside the low range does not repeat the alert");
+Check(alert.Observe(R(40, charging: true)) == null && alert.Observe(R(8)) == ChargeState.Critical,
+    "A recovered battery can alert again, straight to critical");
+var chargingAlert = new LowBatteryAlert();
+Check(chargingAlert.Observe(R(15, charging: true)) == null && chargingAlert.Observe(R(15)) == ChargeState.Low,
+    "A charging mouse is not announced until it runs on battery");
+
+var startupCommand = Autostart.Command(@"C:\Apps\MayaX-Battery\MayaX-Battery.exe");
+Check(startupCommand == "\"C:\\Apps\\MayaX-Battery\\MayaX-Battery.exe\" --tray",
+    "Startup command quotes the path and stays in the tray");
+Check(Autostart.Matches(startupCommand.ToUpperInvariant(), @"C:\Apps\MayaX-Battery\MayaX-Battery.exe") &&
+      !Autostart.Matches(startupCommand, @"D:\Other\MayaX-Battery.exe") &&
+      !Autostart.Matches("\"C:\\Apps\\MayaX-Battery\\MayaX-Battery.exe\"", @"C:\Apps\MayaX-Battery\MayaX-Battery.exe") &&
+      !Autostart.Matches(null, @"C:\Apps\MayaX-Battery\MayaX-Battery.exe") && !Autostart.Matches(startupCommand, null),
+    "Startup entry counts only for this executable with --tray");
+Check(Autostart.IsPermanentLocation(@"C:\Apps\MayaX-Battery\MayaX-Battery.exe", @"C:\Users\u\AppData\Local\Temp\") &&
+      !Autostart.IsPermanentLocation(@"C:\Users\u\AppData\Local\Temp\Temp1_app.zip\MayaX-Battery.exe", @"C:\Users\u\AppData\Local\Temp") &&
+      Autostart.IsPermanentLocation(@"C:\Users\u\AppData\Local\Temporary\MayaX-Battery.exe", @"C:\Users\u\AppData\Local\Temp"),
+    "Startup entry is refused for a copy running from the temp folder");
+
+Check(AppInfo.DisplayVersion("1.2.0+0123abc") == "1.2.0" && AppInfo.DisplayVersion("1.2.0-rc.1") == "1.2.0-rc.1" &&
+      AppInfo.DisplayVersion(null) == "?" && englishVersion == "Version 1.2.0" && russianVersion == "Версия 1.2.0",
+    "Displayed version drops the source revision and follows the language");
+
 var schedule = new PollSchedule();
 Check(schedule.DelaySeconds == 60, "Normal polling is once per minute");
 schedule.Observe(true);
@@ -300,6 +359,3 @@ if (args.Contains("--device"))
     var reading = new CompxSource().Read();
     Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(reading));
 }
-
-
-
