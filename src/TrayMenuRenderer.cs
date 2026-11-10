@@ -37,8 +37,7 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
         foreach (ToolStripItem item in menu.Items)
         {
             if (item is not ToolStripMenuItem entry) continue;
-            if (IsFootnote(entry)) entry.Font = SmallFont;
-            entry.Padding = entry.Tag is UiLanguage || IsFootnote(entry) ? new Padding(0, 3, 0, 3)
+            entry.Padding = entry.Tag is UiLanguage ? new Padding(0, 3, 0, 3)
                 : new Padding(0, 6, 0, 6);
             if (entry.HasDropDownItems && entry.DropDown is ToolStripDropDownMenu child)
                 Configure(child);
@@ -119,9 +118,7 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
         int left = Scale(g, TextLeft);
         int right = Scale(g, RightInset(e.Item));
         var rectangle = new Rectangle(left, 0, Math.Max(0, e.Item.Width - left - right), e.Item.Height);
-        bool footnote = IsFootnote(e.Item);
-        TextRenderer.DrawText(g, e.Text, e.TextFont, rectangle,
-            !e.Item.Enabled || (footnote && !e.Item.Selected) ? Muted : Ink, flags);
+        TextRenderer.DrawText(g, e.Text, e.TextFont, rectangle, e.Item.Enabled ? Ink : Muted, flags);
 
         if (e.Item.Tag is UiLanguage language)
             DrawFlag(g, language, new Rectangle(Scale(g, IconLeft + 1),
@@ -129,7 +126,7 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
         else if (e.Item.Tag is MenuItemStyle { Glyph: { } glyph })
             TextRenderer.DrawText(g, glyph, IconFont,
                 new Rectangle(Scale(g, IconLeft), 0, Scale(g, IconWidth), e.Item.Height),
-                !e.Item.Enabled ? Muted : e.Item.Selected ? Accent : footnote ? Muted : Ink,
+                !e.Item.Enabled ? Muted : e.Item.Selected ? Accent : Ink,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
                 TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
 
@@ -189,8 +186,6 @@ internal sealed class TrayMenuRenderer : ToolStripProfessionalRenderer
 
     static bool IsCheckable(ToolStripItem item) =>
         item.Tag is UiLanguage or MenuItemStyle { Checkable: true };
-
-    static bool IsFootnote(ToolStripItem item) => item.Tag is MenuItemStyle { Footnote: true };
 
     static int RightInset(ToolStripItem item) => IsCheckable(item) ? 30
         : item is ToolStripMenuItem { HasDropDownItems: true } ? 25 : 18;

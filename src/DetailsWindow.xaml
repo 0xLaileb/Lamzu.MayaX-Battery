@@ -158,19 +158,9 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header: section label and language switch -->
+            <!-- Header: language switch -->
             <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE962;" FontSize="14"
-                               Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="BatteryHeading" Text="BATTERY LEVEL" FontSize="10.5" FontWeight="SemiBold"
-                               Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
-                </StackPanel>
-                <Border Grid.Column="1" Background="#12181B" BorderBrush="{StaticResource Outline}"
+                <Border HorizontalAlignment="Right" Background="#12181B" BorderBrush="{StaticResource Outline}"
                         BorderThickness="1" CornerRadius="10" Padding="2">
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="EnglishButton" ToolTip="English"
@@ -212,7 +202,7 @@
             </Grid>
 
             <!-- Hero: ring gauge with the percentage and device name -->
-            <Grid Grid.Row="1" Width="200" Height="200" Margin="0,14,0,0" HorizontalAlignment="Center">
+            <Grid Grid.Row="1" Width="200" Height="200" Margin="0,6,0,0" HorizontalAlignment="Center">
                 <Ellipse x:Name="Glow" Margin="-34"/>
                 <Canvas Width="200" Height="200">
                     <Ellipse Width="168" Height="168" Canvas.Left="16" Canvas.Top="16"
@@ -321,8 +311,9 @@
                         <TextBlock x:Name="DiagnosticsLabel" Text="Export diagnostics…" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <TextBlock x:Name="VersionText" Grid.Column="1" Text="v0.0.0" FontSize="11"
-                           Foreground="#6B7C80" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <Button x:Name="VersionButton" Grid.Column="1" Content="v0.0.0" FontSize="11"
+                        Style="{StaticResource LinkButtonStyle}" Foreground="#6B7C80"
+                        HorizontalAlignment="Right" Click="OnVersionClick"/>
                 <TextBlock x:Name="DiagnosticsNote" Grid.Row="1" Grid.ColumnSpan="2" Margin="10,3,0,0"
                            FontSize="10.5" Foreground="#6B7C80" TextWrapping="Wrap"
                            Text="Local ZIP report. Nothing is uploaded."/>

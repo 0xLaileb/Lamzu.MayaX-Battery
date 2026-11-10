@@ -42,7 +42,7 @@ public partial class DetailsWindow : Window
     internal DetailsWindow(UiLanguage language = UiLanguage.English)
     {
         InitializeComponent();
-        VersionText.Text = "v" + AppInfo.Version;
+        VersionButton.Content = "v" + AppInfo.Version;
         ApplyTone(Grey, percent: 0);
         SetLanguage(language);
     }
@@ -50,7 +50,6 @@ public partial class DetailsWindow : Window
     internal void SetLanguage(UiLanguage language)
     {
         _text = new UiStrings(language);
-        BatteryHeading.Text = _text.BatteryHeading;
         RateHeading.Text = _text.RateHeading;
         RemainingHeading.Text = _text.RemainingHeading;
         AutomationProperties.SetName(EnglishButton, "English");
@@ -59,6 +58,8 @@ public partial class DetailsWindow : Window
         AutomationProperties.SetName(DiagnosticsButton, _text.ExportDiagnostics);
         UpdateDiagnosticState();
         RefreshButton.ToolTip = _text.RefreshHint;
+        VersionButton.ToolTip = _text.ReleasesHint;
+        AutomationProperties.SetName(VersionButton, _text.ReleasesHint);
         EnglishButton.Tag = language == UiLanguage.English ? "Selected" : null;
         RussianButton.Tag = language == UiLanguage.Russian ? "Selected" : null;
         if (_hasReading) RenderReading();
@@ -168,6 +169,8 @@ public partial class DetailsWindow : Window
 
     void OnRefreshClick(object sender, RoutedEventArgs e) =>
         RefreshRequested?.Invoke(this, EventArgs.Empty);
+
+    void OnVersionClick(object sender, RoutedEventArgs e) => AppInfo.OpenReleases();
 
     void OnDiagnosticsClick(object sender, RoutedEventArgs e) =>
         DiagnosticsRequested?.Invoke(this, EventArgs.Empty);

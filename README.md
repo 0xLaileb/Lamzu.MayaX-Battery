@@ -89,11 +89,10 @@ Hover over the icon to see the device name, the percentage and the remaining tim
 | **Language** | Switches between English and Russian. |
 | **Export diagnostics...** | Saves a local ZIP report. See [Diagnostics](#diagnostics). |
 | **Exit** | Closes the window and removes the tray icon. |
-| **Version** | Shows the installed version. Click it to open the releases page and check for a newer one. |
 
 ### Details window
 
-The window shows the percentage on a ring gauge that changes color with the charge state, the drain rate in percent per hour, the remaining time, when the battery was last checked, and the app version. Closing the window keeps the app running in the tray.
+The window shows the percentage on a ring gauge that changes color with the charge state, the drain rate in percent per hour, the remaining time, and when the battery was last checked. The version in the bottom corner opens the releases page. Closing the window keeps the app running in the tray.
 
 | Key | Action |
 | --- | --- |

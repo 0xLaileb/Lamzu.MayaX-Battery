@@ -119,8 +119,8 @@ try
         "Unsupported language falls back safely");
     var englishText = new UiStrings(UiLanguage.English);
     var russianText = new UiStrings(UiLanguage.Russian);
-    Check(englishText.BatteryHeading == "BATTERY LEVEL" && russianText.BatteryHeading == "ЗАРЯД БАТАРЕИ",
-        "Battery heading has both languages");
+    Check(englishText.RateHeading == "Drain rate" && russianText.RateHeading == "Расход",
+        "Metric headings have both languages");
     Check(englishText.Rate(1.8).Contains("1.8") && russianText.Rate(1.8).Contains("1,8"),
         "Numeric UI formatting follows selected language");
     Check(englishText.DeviceError(ReadError.NoResponse) == "Mouse is not responding" &&
@@ -300,8 +300,6 @@ Check(R(100).State == ChargeState.Normal && R(21).State == ChargeState.Normal &&
       Reading.Fail(ReadError.NoResponse).State == ChargeState.Unknown,
     "Charge state thresholds are shared by the icon, window and menu");
 
-var englishVersion = new UiStrings(UiLanguage.English).VersionLabel("1.2.0");
-var russianVersion = new UiStrings(UiLanguage.Russian).VersionLabel("1.2.0");
 var alert = new LowBatteryAlert();
 Check(alert.Observe(R(50)) == null && alert.Observe(R(21)) == null, "Normal charge raises no alert");
 Check(alert.Observe(R(20)) == ChargeState.Low, "Crossing the low threshold alerts once");
@@ -333,8 +331,8 @@ Check(Autostart.IsPermanentLocation(@"C:\Apps\MayaX-Battery\MayaX-Battery.exe", 
     "Startup entry is refused for a copy running from the temp folder");
 
 Check(AppInfo.DisplayVersion("1.2.0+0123abc") == "1.2.0" && AppInfo.DisplayVersion("1.2.0-rc.1") == "1.2.0-rc.1" &&
-      AppInfo.DisplayVersion(null) == "?" && englishVersion == "Version 1.2.0" && russianVersion == "Версия 1.2.0",
-    "Displayed version drops the source revision and follows the language");
+      AppInfo.DisplayVersion(null) == "?",
+    "Displayed version drops the source revision");
 
 var schedule = new PollSchedule();
 Check(schedule.DelaySeconds == 60, "Normal polling is once per minute");

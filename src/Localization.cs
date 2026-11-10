@@ -73,7 +73,6 @@ internal sealed class UiStrings
         Culture = CultureInfo.GetCultureInfo(Ru ? "ru-RU" : "en-US");
     }
 
-    internal string BatteryHeading => Ru ? "ЗАРЯД БАТАРЕИ" : "BATTERY LEVEL";
     internal string UnknownCharge => Ru ? "Заряд неизвестен" : "Battery level unknown";
     internal string ChargeAutomation(int percent) => Ru ? $"Заряд {percent}%" : $"Battery level {percent}%";
     internal string WaitingForData => Ru ? "Ожидание данных" : "Waiting for data";
@@ -124,7 +123,6 @@ internal sealed class UiStrings
             : hours is >= 0 ? " · " + Remaining(hours.Value) : "");
     internal string TrayStatus(string device, int percent, bool charging, double? hours = null) =>
         $"{device}: {ChargeSummary(percent, charging, hours)}";
-    internal string VersionLabel(string version) => (Ru ? "Версия " : "Version ") + version;
     internal string ReleasesHint => Ru ? "Открыть страницу релизов" : "Open the releases page";
     internal string ReadFailure(string exceptionName) => Ru ? $"Ошибка чтения: {exceptionName}" : $"Read error: {exceptionName}";
     internal string DeviceError(string error)
